@@ -1,0 +1,64 @@
+name: Initialize project README
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: initialize-project-readme
+
+jobs:
+  initialize:
+    if: >-
+      github.repository != 'Keiichiro-Tsukamoto/project-directory-template' &&
+      github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Replace template README
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          marker='<!-- project-directory-template:source-readme -->'
+          readme_template='.github/project-readme.md'
+          workflow_file='.github/workflows/initialize-project-readme.yml'
+
+          if [ "$(git rev-list --count HEAD)" -ne 1 ]; then
+            echo "Skip: repository no longer has only its initial commit."
+            exit 0
+          fi
+
+          if ! grep -Fqx "$marker" README.md; then
+            echo "Skip: README has already been initialized or customized."
+            exit 0
+          fi
+
+          if [ ! -f "$readme_template" ]; then
+            echo "Error: project README template is missing."
+            exit 1
+          fi
+
+          project_name="${GITHUB_REPOSITORY#*/}"
+          sed "s/{{PROJECT_NAME}}/${project_name}/g" "$readme_template" > README.md
+          rm "$readme_template" "$workflow_file"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md "$readme_template" "$workflow_file"
+
+          if git diff --cached --quiet; then
+            echo "Skip: no initialization changes were produced."
+            exit 0
+          fi
+
+          git commit -m "Initialize project README"
+          git push

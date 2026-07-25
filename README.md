@@ -1,3 +1,4 @@
+<!-- project-directory-template:source-readme -->
 # Project Directory Template
 
 ## 本プロダクトが解決する課題
@@ -42,7 +43,11 @@ python3 current/context-tools/context_snapshot.py check
 
 ### 1-B. 新規プロジェクトへ導入する（Gitを使う場合）
 
-テンプレートを新しいプロジェクトルートへコピーし、その場所でGitを初期化します。
+GitHub上でこのリポジトリの「Use this template」から作成した場合、作成直後に`Initialize project README` workflowが1回だけ動作します。workflowは新しいリポジトリ名を見出しにしたプロジェクト用READMEへ切り替え、初期化専用のworkflowとひな型を削除してコミットします。完了後は「2. プロジェクトを初期化する」へ進みます。
+
+READMEが`Project Directory Template`のままの場合は、新しいリポジトリのActions画面で`Initialize project README`の実行結果を確認してください。作成時にGitHub Actionsが無効だった場合は、有効化後にこのworkflowを手動実行できます。書き込み権限またはデフォルトブランチへの直接pushがポリシーで禁止されている場合、自動初期化は失敗します。その場合はREADMEをプロジェクト用の内容へ手動で置き換え、`.github/project-readme.md`と`.github/workflows/initialize-project-readme.yml`を削除してコミットします。既にREADMEを編集した場合や追加コミットがある場合、workflowは誤上書きを避けるため何も変更しません。
+
+GitHubのテンプレート機能を使わずローカルへコピーする場合は、テンプレートを新しいプロジェクトルートへコピーし、`.github/project-readme.md`と`.github/workflows/initialize-project-readme.yml`を削除してから、その場所でGitを初期化します。READMEはプロジェクト用の内容へ手動で置き換えます。
 
 ```text
 git init
