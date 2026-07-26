@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Replace template README
+      - name: Initialize project files
         shell: bash
         run: |
           set -euo pipefail
@@ -31,6 +31,10 @@ jobs:
           marker='<!-- project-directory-template:source-readme -->'
           readme_template='.github/project-readme.md'
           workflow_file='.github/workflows/initialize-project-readme.yml'
+          source_license='LICENSE'
+          template_license='PROJECT_DIRECTORY_TEMPLATE_LICENSE'
+          source_contributing='CONTRIBUTING.md'
+          source_security='SECURITY.md'
 
           if [ "$(git rev-list --count HEAD)" -ne 1 ]; then
             echo "Skip: repository no longer has only its initial commit."
@@ -47,18 +51,31 @@ jobs:
             exit 1
           fi
 
+          if [ ! -f "$source_license" ]; then
+            echo "Error: source template license is missing."
+            exit 1
+          fi
+
           project_name="${GITHUB_REPOSITORY#*/}"
           sed "s/{{PROJECT_NAME}}/${project_name}/g" "$readme_template" > README.md
-          rm "$readme_template" "$workflow_file"
+          mv "$source_license" "$template_license"
+          rm "$readme_template" "$workflow_file" "$source_contributing" "$source_security"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md "$readme_template" "$workflow_file"
+          git add -A -- \
+            README.md \
+            "$readme_template" \
+            "$workflow_file" \
+            "$source_license" \
+            "$template_license" \
+            "$source_contributing" \
+            "$source_security"
 
           if git diff --cached --quiet; then
             echo "Skip: no initialization changes were produced."
             exit 0
           fi
 
-          git commit -m "Initialize project README"
+          git commit -m "Initialize project files"
           git push
