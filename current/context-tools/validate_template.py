@@ -13,14 +13,19 @@ REQUIRED_DIRECTORIES = ("_control", "wip", "current", "reference", "archive")
 REQUIRED_CONTROL_FILES = ("project.md", "tasks.md", "context.md", "rules.md")
 ALLOWED_STATUSES = {"pending", "active", "blocked", "done"}
 EXTERNAL_FIELDS = (
+    "スキーマ版",
     "サービス",
     "ワークスペース",
     "リソース種別",
     "リソースID",
     "ロケーター",
+    "変更性",
     "取得モード",
     "期待するリビジョン",
     "取得範囲",
+    "鮮度確認方法",
+    "キャッシュ再利用",
+    "検証不能時",
     "ローカルスナップショット",
     "代替手段",
     "ローカル保存",
@@ -28,17 +33,32 @@ EXTERNAL_FIELDS = (
     "アクセス上の注意",
 )
 NONEMPTY_EXTERNAL_FIELDS = (
+    "スキーマ版",
     "サービス",
     "ワークスペース",
     "リソース種別",
     "リソースID",
+    "変更性",
     "取得モード",
     "取得範囲",
+    "鮮度確認方法",
+    "キャッシュ再利用",
+    "検証不能時",
     "代替手段",
     "ローカル保存",
     "Git登録",
 )
 ALLOWED_RETRIEVAL_MODES = {"live", "pinned", "snapshot"}
+ALLOWED_MUTABILITY = {"mutable", "immutable"}
+ALLOWED_FRESHNESS_METHODS = {
+    "revision",
+    "updated-at",
+    "content-hash",
+    "refetch",
+    "not-applicable",
+}
+ALLOWED_CACHE_REUSE = {"禁止", "同一版確認時のみ", "固定スナップショットのみ"}
+ALLOWED_UNVERIFIABLE_ACTIONS = {"停止", "登録スナップショットを旧版として使用"}
 ALLOWED_FALLBACKS = {"none", "local-snapshot"}
 ALLOWED_STORAGE_VALUES = {"許可", "禁止", "要承認"}
 SECRET_PATTERN = re.compile(
@@ -68,6 +88,15 @@ def descriptor_fields(path: Path) -> dict[str, str]:
         if match:
             fields[match.group(1).strip()] = match.group(2).strip()
     return fields
+
+
+def descriptor_field_names(path: Path) -> list[str]:
+    names: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = re.match(r"^- ([^:：]+)[:：]\s*(.*)$", line)
+        if match:
+            names.append(match.group(1).strip())
+    return names
 
 
 def is_external_descriptor(path: Path) -> bool:
@@ -169,6 +198,25 @@ def validate(root: Path) -> dict[str, object]:
     identity_paths: dict[tuple[str, str, str, str], set[str]] = {}
     for task_id, descriptor_path, fields in descriptors:
         label = descriptor_path.as_posix()
+        descriptor = root / descriptor_path
+        field_names = descriptor_field_names(descriptor)
+        duplicate_fields = sorted(
+            {name for name in field_names if field_names.count(name) > 1}
+        )
+        content = descriptor.read_text(encoding="utf-8")
+        resource_heading_count = len(
+            re.findall(r"^# 外部リソース:", content, flags=re.MULTILINE)
+        )
+        record(
+            f"external_single_resource_heading:{label}",
+            resource_heading_count == 1,
+            f"count={resource_heading_count}",
+        )
+        record(
+            f"external_fields_unique:{label}",
+            not duplicate_fields,
+            f"duplicates={duplicate_fields}",
+        )
         missing = [field for field in EXTERNAL_FIELDS if field not in fields]
         record(
             f"external_fields_present:{label}",
@@ -182,14 +230,44 @@ def validate(root: Path) -> dict[str, object]:
             f"empty={empty}",
         )
 
+        schema_version = fields.get("スキーマ版", "")
+        mutability = fields.get("変更性", "")
         mode = fields.get("取得モード", "")
+        freshness_method = fields.get("鮮度確認方法", "")
+        cache_reuse = fields.get("キャッシュ再利用", "")
+        unverifiable_action = fields.get("検証不能時", "")
         fallback = fields.get("代替手段", "")
         local_storage = fields.get("ローカル保存", "")
         git_tracking = fields.get("Git登録", "")
         record(
+            f"external_schema_version:{label}",
+            schema_version == "2",
+            schema_version,
+        )
+        record(
+            f"external_mutability_allowed:{label}",
+            mutability in ALLOWED_MUTABILITY,
+            mutability,
+        )
+        record(
             f"external_mode_allowed:{label}",
             mode in ALLOWED_RETRIEVAL_MODES,
             mode,
+        )
+        record(
+            f"external_freshness_method_allowed:{label}",
+            freshness_method in ALLOWED_FRESHNESS_METHODS,
+            freshness_method,
+        )
+        record(
+            f"external_cache_reuse_allowed:{label}",
+            cache_reuse in ALLOWED_CACHE_REUSE,
+            cache_reuse,
+        )
+        record(
+            f"external_unverifiable_action_allowed:{label}",
+            unverifiable_action in ALLOWED_UNVERIFIABLE_ACTIONS,
+            unverifiable_action,
         )
         record(
             f"external_fallback_allowed:{label}",
@@ -211,8 +289,41 @@ def validate(root: Path) -> dict[str, object]:
             mode != "pinned" or bool(fields.get("期待するリビジョン")),
             fields.get("期待するリビジョン", ""),
         )
+        record(
+            f"external_snapshot_freshness:{label}",
+            (mode == "snapshot") == (freshness_method == "not-applicable"),
+            f"mode={mode}, freshness={freshness_method}",
+        )
+        record(
+            f"external_snapshot_cache_policy:{label}",
+            (mode == "snapshot") == (cache_reuse == "固定スナップショットのみ"),
+            f"mode={mode}, cache={cache_reuse}",
+        )
+        record(
+            f"external_refetch_cache_policy:{label}",
+            freshness_method != "refetch" or cache_reuse == "禁止",
+            f"freshness={freshness_method}, cache={cache_reuse}",
+        )
+        record(
+            f"external_live_or_pinned_cache_policy:{label}",
+            mode not in {"live", "pinned"}
+            or cache_reuse in {"禁止", "同一版確認時のみ"},
+            f"mode={mode}, cache={cache_reuse}",
+        )
+        registered_snapshot_fallback = (
+            unverifiable_action == "登録スナップショットを旧版として使用"
+        )
+        record(
+            f"external_fallback_unverifiable_consistency:{label}",
+            (fallback == "local-snapshot") == registered_snapshot_fallback,
+            f"fallback={fallback}, unverifiable={unverifiable_action}",
+        )
+        record(
+            f"external_snapshot_fallback_not_redundant:{label}",
+            mode != "snapshot" or fallback == "none",
+            f"mode={mode}, fallback={fallback}",
+        )
 
-        content = (root / descriptor_path).read_text(encoding="utf-8")
         record(
             f"external_no_obvious_secret:{label}",
             SECRET_PATTERN.search(content) is None,

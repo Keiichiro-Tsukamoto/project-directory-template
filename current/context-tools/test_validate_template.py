@@ -41,14 +41,19 @@ class TemplateValidationTest(unittest.TestCase):
     @staticmethod
     def descriptor(**overrides: str) -> str:
         values = {
+            "スキーマ版": "2",
             "サービス": "example-service",
             "ワークスペース": "workspace-1",
             "リソース種別": "document",
             "リソースID": "document-1",
             "ロケーター": "https://example.invalid/document-1",
+            "変更性": "mutable",
             "取得モード": "live",
             "期待するリビジョン": "",
             "取得範囲": "本文全体",
+            "鮮度確認方法": "revision",
+            "キャッシュ再利用": "同一版確認時のみ",
+            "検証不能時": "停止",
             "ローカルスナップショット": "",
             "代替手段": "none",
             "ローカル保存": "要承認",
@@ -136,6 +141,29 @@ class TemplateValidationTest(unittest.TestCase):
             failures = self.failed_checks(VALIDATOR.validate(root))
             self.assertIn("external_fields_present:reference/external/test-resource.md", failures)
 
+    def test_legacy_descriptor_without_schema_v2_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            content = self.descriptor().replace("- スキーマ版: 2\n", "")
+            self.add_descriptor(root, content)
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            label = "reference/external/test-resource.md"
+            self.assertIn(f"external_fields_present:{label}", failures)
+            self.assertIn(f"external_schema_version:{label}", failures)
+
+    def test_multiple_resources_in_one_descriptor_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            first = self.descriptor()
+            second = self.descriptor(
+                **{"リソースID": "document-2"}
+            ).replace("テスト資料", "テスト資料2", 1)
+            self.add_descriptor(root, first + "\n" + second)
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            label = "reference/external/test-resource.md"
+            self.assertIn(f"external_single_resource_heading:{label}", failures)
+            self.assertIn(f"external_fields_unique:{label}", failures)
+
     def test_pinned_without_revision_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = self.copy_template(Path(directory))
@@ -151,6 +179,8 @@ class TemplateValidationTest(unittest.TestCase):
                 self.descriptor(
                     **{
                         "取得モード": "snapshot",
+                        "鮮度確認方法": "not-applicable",
+                        "キャッシュ再利用": "固定スナップショットのみ",
                         "ローカルスナップショット": "reference/snapshots/source.md",
                         "ローカル保存": "許可",
                     }
@@ -172,6 +202,8 @@ class TemplateValidationTest(unittest.TestCase):
                 self.descriptor(
                     **{
                         "取得モード": "snapshot",
+                        "鮮度確認方法": "not-applicable",
+                        "キャッシュ再利用": "固定スナップショットのみ",
                         "ローカルスナップショット": "reference/snapshots/source.md",
                         "ローカル保存": "禁止",
                     }
@@ -195,6 +227,81 @@ class TemplateValidationTest(unittest.TestCase):
                 self.descriptor(
                     **{
                         "取得モード": "snapshot",
+                        "鮮度確認方法": "not-applicable",
+                        "キャッシュ再利用": "固定スナップショットのみ",
+                        "ローカルスナップショット": "reference/snapshots/source.md",
+                        "ローカル保存": "許可",
+                    }
+                ),
+                extra_context="| T-001 | reference/snapshots/source.md |\n",
+            )
+            result = VALIDATOR.validate(root)
+            self.assertTrue(result["passed"], self.failed_checks(result))
+
+    def test_refetch_requires_cache_reuse_forbidden(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            self.add_descriptor(
+                root,
+                self.descriptor(**{"鮮度確認方法": "refetch"}),
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn(
+                "external_refetch_cache_policy:reference/external/test-resource.md",
+                failures,
+            )
+
+    def test_valid_refetch_without_cache_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            self.add_descriptor(
+                root,
+                self.descriptor(
+                    **{
+                        "鮮度確認方法": "refetch",
+                        "キャッシュ再利用": "禁止",
+                    }
+                ),
+            )
+            result = VALIDATOR.validate(root)
+            self.assertTrue(result["passed"], self.failed_checks(result))
+
+    def test_local_snapshot_fallback_requires_matching_failure_action(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            snapshot = root / "reference/snapshots/source.md"
+            snapshot.parent.mkdir(parents=True, exist_ok=True)
+            snapshot.write_text("snapshot\n", encoding="utf-8")
+            self.add_descriptor(
+                root,
+                self.descriptor(
+                    **{
+                        "代替手段": "local-snapshot",
+                        "ローカルスナップショット": "reference/snapshots/source.md",
+                        "ローカル保存": "許可",
+                    }
+                ),
+                extra_context="| T-001 | reference/snapshots/source.md |\n",
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn(
+                "external_fallback_unverifiable_consistency:"
+                "reference/external/test-resource.md",
+                failures,
+            )
+
+    def test_valid_local_snapshot_fallback_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            snapshot = root / "reference/snapshots/source.md"
+            snapshot.parent.mkdir(parents=True, exist_ok=True)
+            snapshot.write_text("snapshot\n", encoding="utf-8")
+            self.add_descriptor(
+                root,
+                self.descriptor(
+                    **{
+                        "検証不能時": "登録スナップショットを旧版として使用",
+                        "代替手段": "local-snapshot",
                         "ローカルスナップショット": "reference/snapshots/source.md",
                         "ローカル保存": "許可",
                     }
