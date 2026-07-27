@@ -71,11 +71,15 @@
 - `reference/operation_guide.md`
 - `reference/git_artifact_management.md`
 - `reference/external_resource_context.md`
+- `reference/external/_template.md`
+- `reference/external/_state_template.md`
 - `reference/model_routing_and_delegation.md`
 - `reference/template_update_guide.md`
 - `current/context-tools/`配下の付属ツールとテスト
 
 更新元に存在しない共通ファイルは、廃止されたと推測して削除しません。削除理由と代替が確認できる場合だけ、削除候補として報告します。
+
+`reference/external/`にあるプロジェクト固有の参照記述は上書き禁止です。`_template.md`と`_state_template.md`だけを共通ファイル候補とし、既存の参照記述は後述のスキーマ移行として個別に扱います。
 
 ### 個別統合
 
@@ -155,6 +159,20 @@ Git履歴があるという理由だけで、どのcommitがテンプレート�
 - 更新元のルート`LICENSE`を既存プロジェクトのルートへ上書きせず、`PROJECT_DIRECTORY_TEMPLATE_LICENSE`の候補として扱います。
 - 既存プロジェクトを更新元へ移動せず、更新元ディレクトリも既存プロジェクト内へ移動または一括コピーしません。
 
+外部リソース参照スキーマが更新される場合、既存の`reference/external/*.md`を最新版テンプレートで一括上書きしません。独立したリソースごとに、既存の識別子、範囲、権限、保存方針を保持した移行候補をWIPへ作ります。
+
+旧形式の参照記述がactiveタスクのcontextへ登録されている場合、新しい静的検証は必須フィールド不足として失敗します。これは互換性事故ではなく、安全でないcache利用を止めるための検出です。次の順で移行します。
+
+1. 外部内容と既存cacheをまだ利用しない。
+2. 1リソース1ファイルへ分割する。
+3. 新しい`reference/external/_template.md`の全フィールドへ移す。
+4. 変更性、鮮度確認方法、cache再利用、検証不能時の扱いを人へ確認する。
+5. contextをWIP移行候補へ更新して静的検証する。
+6. 承認後に対応パスへ反映し、contextを反映先へ更新して再検証する。
+7. 合格後に初めて外部内容を取得またはcache再利用する。
+
+revision、更新日時、安定したhashのいずれもcache側へ記録されていない場合、そのcacheを現在版として引き継ぎません。リモートから再取得するか、再取得できなければ停止します。
+
 ### 5. 反映前に人が確認する
 
 次をまとめて提示します。
@@ -180,6 +198,7 @@ WIP候補を反映先へ移動した場合は、検証より前にcontextの候�
 - プロジェクト固有README、`project.md`、タスク、成果物の保持
 - 既存のルート`LICENSE`の保持と`PROJECT_DIRECTORY_TEMPLATE_LICENSE`の配置
 - 新しい`rules.md`と条件付きガイドの参照整合性
+- 外部リソースを使うactiveタスクでは、参照記述が新しいスキーマで静的検証に合格すること
 - 付属の静的検証とテスト
 - Gitを使う場合は、承認された対象に限定した差分
 
