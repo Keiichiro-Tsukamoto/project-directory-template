@@ -69,6 +69,7 @@
 
 - `_control/rules.md`
 - `reference/operation_guide.md`
+- `reference/architecture_decision_records.md`
 - `reference/git_artifact_management.md`
 - `reference/external_resource_context.md`
 - `reference/external/_template.md`
