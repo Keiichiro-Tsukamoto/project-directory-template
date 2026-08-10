@@ -69,6 +69,8 @@ SECRET_PATTERN = re.compile(
 
 def table_rows(path: Path, columns: int) -> list[list[str]]:
     rows: list[list[str]] = []
+    if not path.is_file():
+        return rows
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.startswith("|"):
             continue
@@ -99,19 +101,30 @@ def descriptor_field_names(path: Path) -> list[str]:
     return names
 
 
-def is_external_descriptor(path: Path) -> bool:
-    return (
+def is_external_descriptor(path: Path, task_id: str) -> bool:
+    approved_location = (
         len(path.parts) >= 3
         and path.parts[0:2] == ("reference", "external")
-        and path.suffix == ".md"
-        and not path.name.startswith("_")
+    ) or (
+        len(path.parts) >= 5
+        and path.parts[0:2] == ("wip", task_id)
+        and path.parts[2:4] == ("reference", "external")
     )
+    return approved_location and path.suffix == ".md" and not path.name.startswith("_")
 
 
 def safe_relative_path(value: str) -> tuple[Path, bool]:
     path = Path(value)
     safe = bool(value) and not path.is_absolute() and ".." not in path.parts
     return path, safe
+
+
+def path_within_root(root: Path, path: Path) -> bool:
+    try:
+        (root / path).resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def validate(root: Path) -> dict[str, object]:
@@ -152,10 +165,13 @@ def validate(root: Path) -> dict[str, object]:
 
     for task_id, _name, status, detail in tasks:
         detail_path, detail_is_relative = safe_relative_path(detail)
+        detail_within_root = detail_is_relative and path_within_root(root, detail_path)
         record(f"detail_path_relative:{task_id}", detail_is_relative, detail)
+        record(f"detail_path_within_root:{task_id}", detail_within_root, detail)
+        detail_exists = detail_within_root and (root / detail_path).is_file()
         record(
             f"detail_exists:{task_id}",
-            detail_is_relative and (root / detail_path).is_file(),
+            detail_exists,
             detail,
         )
         expected_directory = "archive" if status == "done" else "wip"
@@ -164,6 +180,14 @@ def validate(root: Path) -> dict[str, object]:
             bool(detail_path.parts) and detail_path.parts[0] == expected_directory,
             f"expected {expected_directory}/, got {detail}",
         )
+        if status in {"active", "pending", "blocked"} and detail_exists:
+            detail_content = (root / detail_path).read_text(encoding="utf-8")
+            for heading in ("## Background", "## Purpose", "## Goal", "## Notes"):
+                record(
+                    f"detail_heading:{task_id}:{heading[3:]}",
+                    heading in detail_content,
+                    heading,
+                )
 
     contexts = table_rows(root / "_control/context.md", 2)
     context_pairs = [(task_id, file_path) for task_id, file_path in contexts]
@@ -174,23 +198,31 @@ def validate(root: Path) -> dict[str, object]:
         str(context_pairs),
     )
 
+    for task_id in sorted({task_id for task_id, _file_path in contexts}):
+        record(f"context_task_exists:{task_id}", task_id in task_ids, task_id)
+        record(
+            f"context_task_not_done:{task_id}",
+            task_id in task_statuses and task_statuses[task_id] != "done",
+            task_statuses.get(task_id, "missing task"),
+        )
+
     descriptors: list[tuple[str, Path, dict[str, str]]] = []
     for task_id, file_path in contexts:
         context_path, context_is_relative = safe_relative_path(file_path)
-        record(f"context_task_exists:{task_id}", task_id in task_ids, task_id)
-        record(
-            f"context_task_not_done:{task_id}:{file_path}",
-            task_statuses.get(task_id) != "done",
-            task_statuses.get(task_id, "missing task"),
-        )
+        context_within_root = context_is_relative and path_within_root(root, context_path)
         record(
             f"context_path_relative:{task_id}:{file_path}",
             context_is_relative,
             file_path,
         )
-        exists = context_is_relative and (root / context_path).is_file()
+        record(
+            f"context_path_within_root:{task_id}:{file_path}",
+            context_within_root,
+            file_path,
+        )
+        exists = context_within_root and (root / context_path).is_file()
         record(f"context_file_exists:{task_id}:{file_path}", exists, file_path)
-        if exists and is_external_descriptor(context_path):
+        if exists and is_external_descriptor(context_path, task_id):
             descriptors.append(
                 (task_id, context_path, descriptor_fields(root / context_path))
             )
@@ -340,12 +372,15 @@ def validate(root: Path) -> dict[str, object]:
         needs_snapshot = mode == "snapshot" or fallback == "local-snapshot"
         snapshot_value = fields.get("ローカルスナップショット", "")
         snapshot_path, snapshot_is_relative = safe_relative_path(snapshot_value)
+        snapshot_within_root = snapshot_is_relative and path_within_root(
+            root, snapshot_path
+        )
         record(
             f"external_snapshot_path:{label}",
-            not needs_snapshot or snapshot_is_relative,
+            not needs_snapshot or snapshot_within_root,
             snapshot_value,
         )
-        snapshot_exists = snapshot_is_relative and (root / snapshot_path).is_file()
+        snapshot_exists = snapshot_within_root and (root / snapshot_path).is_file()
         record(
             f"external_snapshot_exists:{label}",
             not needs_snapshot or snapshot_exists,
@@ -385,7 +420,8 @@ def validate(root: Path) -> dict[str, object]:
             str(sorted(paths)),
         )
 
-    project = (root / "_control/project.md").read_text(encoding="utf-8")
+    project_path = root / "_control/project.md"
+    project = project_path.read_text(encoding="utf-8") if project_path.is_file() else ""
     for heading in ("## Background", "## Purpose", "## Goal"):
         record(f"project_heading:{heading[3:]}", heading in project, heading)
 
@@ -394,6 +430,7 @@ def validate(root: Path) -> dict[str, object]:
         "root": str(root),
         "passed": not failures,
         "checks": len(checks),
+        "check_types": len({str(check["check"]).split(":", 1)[0] for check in checks}),
         "failures": len(failures),
         "warnings": len(warnings),
         "warning_details": warnings,
@@ -405,6 +442,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("root", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="全検査詳細を標準出力へ表示する",
+    )
     args = parser.parse_args()
 
     result = validate(args.root)
@@ -412,7 +454,22 @@ def main() -> None:
     args.output.write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if args.verbose:
+        console_result = result
+    else:
+        console_result = {
+            key: result[key]
+            for key in (
+                "root",
+                "passed",
+                "checks",
+                "check_types",
+                "failures",
+                "warnings",
+            )
+        }
+        console_result["output"] = str(args.output)
+    print(json.dumps(console_result, ensure_ascii=False, indent=2))
     raise SystemExit(0 if result["passed"] else 1)
 
 

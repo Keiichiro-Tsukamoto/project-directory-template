@@ -16,7 +16,7 @@ Project Directory Templateへの改善提案を歓迎します。
 4. 次の検証を実行します。
 
 ```text
-python3 current/context-tools/validate_template.py .
+python3 current/context-tools/validate_template.py . --output /tmp/project-directory-template-validation.json
 python3 -m unittest discover -s current/context-tools -p 'test_*.py'
 ```
 
