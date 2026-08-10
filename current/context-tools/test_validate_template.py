@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -97,6 +100,63 @@ class TemplateValidationTest(unittest.TestCase):
             failures = self.failed_checks(VALIDATOR.validate(root))
             self.assertIn("context_rows_unique", failures)
 
+    def test_duplicate_task_id_and_invalid_status_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            tasks = root / "_control/tasks.md"
+            original = tasks.read_text(encoding="utf-8")
+            duplicate = "| T-001 | Duplicate | pending | wip/T-001_initialize_project.md |\n"
+            tasks.write_text(
+                original.replace("| active |", "| invalid |") + duplicate,
+                encoding="utf-8",
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn("task_ids_unique", failures)
+            self.assertIn("statuses_allowed", failures)
+
+    def test_multiple_active_tasks_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            detail = root / "wip/T-002_test.md"
+            detail.write_text(
+                "# Task\n\n## Background\n\n## Purpose\n\n## Goal\n\n## Notes\n",
+                encoding="utf-8",
+            )
+            tasks = root / "_control/tasks.md"
+            tasks.write_text(
+                tasks.read_text(encoding="utf-8")
+                + "| T-002 | Test | active | wip/T-002_test.md |\n",
+                encoding="utf-8",
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn("active_at_most_one", failures)
+
+    def test_unknown_task_and_missing_context_file_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            context = root / "_control/context.md"
+            context.write_text(
+                context.read_text(encoding="utf-8")
+                + "| T-999 | current/missing.md |\n",
+                encoding="utf-8",
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn("context_task_exists:T-999", failures)
+            self.assertIn("context_task_not_done:T-999", failures)
+            self.assertIn(
+                "context_file_exists:T-999:current/missing.md", failures
+            )
+
+    def test_missing_required_directory_and_control_file_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            shutil.rmtree(root / "archive")
+            (root / "_control/project.md").unlink()
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn("directory:archive", failures)
+            self.assertIn("control_file:project.md", failures)
+            self.assertIn("project_heading:Background", failures)
+
     def test_done_task_context_and_detail_location_fail(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = self.copy_template(Path(directory))
@@ -111,9 +171,7 @@ class TemplateValidationTest(unittest.TestCase):
             )
             failures = self.failed_checks(VALIDATOR.validate(root))
             self.assertIn("detail_location:T-001", failures)
-            self.assertTrue(
-                any(name.startswith("context_task_not_done:T-001:") for name in failures)
-            )
+            self.assertIn("context_task_not_done:T-001", failures)
 
     def test_absolute_context_path_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -125,6 +183,143 @@ class TemplateValidationTest(unittest.TestCase):
             )
             failures = self.failed_checks(VALIDATOR.validate(root))
             self.assertIn("context_path_relative:T-001:/tmp/example.md", failures)
+
+    def test_parent_traversal_fails_for_context_and_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            tasks = root / "_control/tasks.md"
+            tasks.write_text(
+                tasks.read_text(encoding="utf-8").replace(
+                    "wip/T-001_initialize_project.md", "../outside-detail.md"
+                ),
+                encoding="utf-8",
+            )
+            context = root / "_control/context.md"
+            context.write_text(
+                context.read_text(encoding="utf-8")
+                + "| T-001 | ../outside-context.md |\n",
+                encoding="utf-8",
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn("detail_path_relative:T-001", failures)
+            self.assertIn(
+                "context_path_relative:T-001:../outside-context.md", failures
+            )
+
+    def test_symlink_escape_fails_for_context_and_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            root = self.copy_template(base)
+            outside = base / "outside.md"
+            outside.write_text(
+                "# outside\n\n## Background\n\n## Purpose\n\n## Goal\n\n## Notes\n",
+                encoding="utf-8",
+            )
+
+            context_link = root / "wip/context-link.md"
+            context_link.symlink_to(outside)
+            context = root / "_control/context.md"
+            context.write_text(
+                context.read_text(encoding="utf-8")
+                + "| T-001 | wip/context-link.md |\n",
+                encoding="utf-8",
+            )
+
+            detail_link = root / "wip/detail-link.md"
+            detail_link.symlink_to(outside)
+            tasks = root / "_control/tasks.md"
+            original_detail = "wip/T-001_initialize_project.md"
+            tasks.write_text(
+                tasks.read_text(encoding="utf-8").replace(
+                    original_detail, "wip/detail-link.md"
+                ),
+                encoding="utf-8",
+            )
+
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn(
+                "context_path_within_root:T-001:wip/context-link.md", failures
+            )
+            self.assertIn("detail_path_within_root:T-001", failures)
+
+    def test_active_task_detail_requires_four_headings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            detail = root / "wip/T-001_initialize_project.md"
+            detail.write_text(
+                detail.read_text(encoding="utf-8").replace("## Notes", "## Memo"),
+                encoding="utf-8",
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn("detail_heading:T-001:Notes", failures)
+
+    def test_wip_external_descriptor_is_schema_validated(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            relative = Path("wip/T-001/reference/external/test-resource.md")
+            descriptor = root / relative
+            descriptor.parent.mkdir(parents=True, exist_ok=True)
+            descriptor.write_text(
+                self.descriptor().replace("- スキーマ版: 2\n", ""),
+                encoding="utf-8",
+            )
+            context = root / "_control/context.md"
+            context.write_text(
+                context.read_text(encoding="utf-8")
+                + f"| T-001 | {relative.as_posix()} |\n",
+                encoding="utf-8",
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            label = relative.as_posix()
+            self.assertIn(f"external_fields_present:{label}", failures)
+            self.assertIn(f"external_schema_version:{label}", failures)
+
+    def test_context_task_checks_are_aggregated_by_task_id(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            context = root / "_control/context.md"
+            context.write_text(
+                context.read_text(encoding="utf-8")
+                + "| T-001 | _control/project.md |\n"
+                + "| T-001 | _control/rules.md |\n",
+                encoding="utf-8",
+            )
+            checks = [
+                str(item["check"])
+                for item in VALIDATOR.validate(root)["details"]
+            ]
+            self.assertEqual(checks.count("context_task_exists:T-001"), 1)
+            self.assertEqual(checks.count("context_task_not_done:T-001"), 1)
+
+    def test_cli_is_concise_unless_verbose(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "validation.json"
+            command = [
+                sys.executable,
+                str(MODULE_PATH),
+                str(self.source),
+                "--output",
+                str(output),
+            ]
+            concise = subprocess.run(
+                command,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            concise_result = json.loads(concise.stdout)
+            full_result = json.loads(output.read_text(encoding="utf-8"))
+            self.assertNotIn("details", concise_result)
+            self.assertIn("details", full_result)
+            self.assertEqual(concise_result["checks"], full_result["checks"])
+
+            verbose = subprocess.run(
+                command + ["--verbose"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("details", json.loads(verbose.stdout))
 
     def test_live_descriptor_passes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -73,6 +75,59 @@ class ContextSnapshotTest(unittest.TestCase):
             before = SNAPSHOT.build_snapshot(root, task_id, detail)
             after = SNAPSHOT.build_snapshot(root, task_id, detail)
             self.assertFalse(SNAPSHOT.compare(before, after)["changed"])
+
+    def test_invalid_and_explicit_task_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self.make_workspace(root)
+            with self.assertRaisesRegex(ValueError, "invalid Task ID"):
+                SNAPSHOT.select_task(root, "invalid")
+
+            tasks = root / "_control/tasks.md"
+            tasks.write_text(
+                tasks.read_text(encoding="utf-8").replace("| active |", "| pending |"),
+                encoding="utf-8",
+            )
+            task_id, detail = SNAPSHOT.select_task(root, "T-001")
+            self.assertEqual(task_id, "T-001")
+            self.assertEqual(detail, "wip/T-001_test.md")
+
+    def test_multiple_active_tasks_fail_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self.make_workspace(root)
+            tasks = root / "_control/tasks.md"
+            tasks.write_text(
+                tasks.read_text(encoding="utf-8")
+                + "| T-002 | Other | active | wip/T-002_test.md |\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "expected one task, found 2"):
+                SNAPSHOT.select_task(root, None)
+
+    def test_state_path_cannot_escape_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            with self.assertRaisesRegex(ValueError, "state path must be relative"):
+                SNAPSHOT.state_path(root, "T-001", "../state.json")
+
+    def test_check_without_snapshot_exits_with_error(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self.make_workspace(root)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(MODULE_PATH),
+                    "check",
+                    "--root",
+                    str(root),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("snapshot not found", result.stderr)
 
 
 if __name__ == "__main__":
