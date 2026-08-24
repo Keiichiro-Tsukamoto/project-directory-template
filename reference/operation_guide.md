@@ -288,10 +288,14 @@ python3 current/context-tools/validate_template.py . --output wip/T-XXX/validati
 
 ## タスク完了時の確認
 
+不要な一時物、cache、旧draftは、削除可能な環境では削除します。削除権限がなく移動可能な環境では、削除を再試行せず`archive/discarded/<Task ID>/`へ移動します。隔離物は将来の参照対象ではなく、contextへ登録しません。
+
 1. 人による成果物の承認がある
 2. 継続成果物が`current/`へ移動されている
-3. 旧版と完了資料が`archive/`へ移動されている
+3. 旧版と保管理由のある完了資料が`archive/`へ移動されている
 4. task detailが`archive/`へ移動されている
-5. `tasks.md`が`done`へ更新されている
-6. 完了タスクの不要なcontext行が削除されている
-7. 後続タスクの参照先が移動後のパスへ更新されている
+5. 不要物が削除されるか、削除不可環境では`archive/discarded/<Task ID>/`へ移動されている
+6. 対象Task IDのWIPが残っていない
+7. `tasks.md`が`done`へ更新されている
+8. 完了タスクの不要なcontext行が削除されている
+9. 後続タスクの参照先が移動後のパスへ更新されている

@@ -188,6 +188,18 @@ def validate(root: Path) -> dict[str, object]:
                     heading in detail_content,
                     heading,
                 )
+    discarded_root = root / "archive/discarded"
+    discarded_entries = list(discarded_root.iterdir()) if discarded_root.is_dir() else []
+    invalid_discarded = sorted(
+        path.name
+        for path in discarded_entries
+        if path.is_symlink() or not path.is_dir() or path.name not in task_ids
+    )
+    record(
+        "discarded_entries_valid",
+        not invalid_discarded,
+        str(invalid_discarded),
+    )
 
     contexts = table_rows(root / "_control/context.md", 2)
     context_pairs = [(task_id, file_path) for task_id, file_path in contexts]
@@ -196,6 +208,16 @@ def validate(root: Path) -> dict[str, object]:
         "context_rows_unique",
         len(context_pairs) == len(context_pair_set),
         str(context_pairs),
+    )
+    discarded_contexts = sorted(
+        file_path
+        for _task_id, file_path in contexts
+        if Path(file_path).parts[:2] == ("archive", "discarded")
+    )
+    record(
+        "context_excludes_discarded",
+        not discarded_contexts,
+        str(discarded_contexts),
     )
 
     for task_id in sorted({task_id for task_id, _file_path in contexts}):
