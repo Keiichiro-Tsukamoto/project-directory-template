@@ -157,7 +157,7 @@ class TemplateValidationTest(unittest.TestCase):
             self.assertIn("control_file:project.md", failures)
             self.assertIn("project_heading:Background", failures)
 
-    def test_done_task_context_and_detail_location_fail(self) -> None:
+    def test_done_task_detail_context_and_discarded_state_fail(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = self.copy_template(Path(directory))
             tasks = root / "_control/tasks.md"
@@ -165,13 +165,19 @@ class TemplateValidationTest(unittest.TestCase):
                 tasks.read_text().replace("| active |", "| done |"), encoding="utf-8"
             )
             context = root / "_control/context.md"
+            discarded = root / "archive/discarded/T-999"
+            discarded.mkdir(parents=True)
+            (discarded / "cache.bin").write_bytes(b"cache")
             context.write_text(
-                context.read_text() + "| T-001 | _control/project.md |\n",
+                context.read_text()
+                + "| T-001 | archive/discarded/T-999/cache.bin |\n",
                 encoding="utf-8",
             )
             failures = self.failed_checks(VALIDATOR.validate(root))
             self.assertIn("detail_location:T-001", failures)
             self.assertIn("context_task_not_done:T-001", failures)
+            self.assertIn("context_excludes_discarded", failures)
+            self.assertIn("discarded_entries_valid", failures)
 
     def test_absolute_context_path_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
