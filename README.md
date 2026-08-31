@@ -90,11 +90,12 @@ git status --short
 git branch --show-current
 ```
 
-既存の`.gitignore`、CONTRIBUTING、開発ガイド、ブランチ方針を優先します。既存の`.gitignore`を上書きせず、必要に応じて次の2行だけを統合します。
+既存の`.gitignore`、CONTRIBUTING、開発ガイド、ブランチ方針を優先します。既存の`.gitignore`を上書きせず、必要に応じて次の3行だけを統合します。
 
 ```gitignore
 /wip/.context-state/
 /wip/T-*/.tmp/
+/archive/discarded/
 ```
 
 追加後は「2. プロジェクトを初期化する」へ進みます。
@@ -255,6 +256,12 @@ Copyright (c) 2026 塚本 圭一郎 (Keiichiro Tsukamoto)
 
 問い合わせ時は、利用環境、現在のTask ID、発生した事象、実行した検証とその結果を添えてください。秘密情報や認証情報は含めないでください。
 
+利用フィードバックをLLMで整理する場合は、次の指示を渡します。詳細は`reference/product_feedback.md`を参照してください。
+
+> このテンプレートの利用フィードバックを作成してください。`reference/product_feedback.md`に従い、実際に起きた事実と改善提案を分け、機密情報を除いたGitHub Issue用の下書きをWIPに作ってください。GitHubへの投稿は行わないでください。
+
+複数の問題は最初にWIPで整理し、関連するものだけをまとめます。Issue下書きは一度に最大3件とし、[GitHub Issues](https://github.com/Keiichiro-Tsukamoto/project-directory-template/issues/new)への投稿は内容と投稿対象について人の承認を得てから行います。
+
 ## 補足事項
 
 Git、Pythonツール、外部コネクタ、モデル選択・並列実行は任意です。利用できない機能があっても、対象限定の`context.md`、成果物の状態分離、人による承認を使った基本運用は可能です。
@@ -266,5 +273,6 @@ Git、Pythonツール、外部コネクタ、モデル選択・並列実行は�
 - Git、成果物分類、権限、ハッシュ方式：`reference/git_artifact_management.md`
 - 外部リソースの取得、変更検出、エラー処理：`reference/external_resource_context.md`
 - モデル階層、作業票、並列化、エスカレーション、評価：`reference/model_routing_and_delegation.md`
+- 本テンプレートへの利用フィードバック：`reference/product_feedback.md`
 
-テンプレートの`.gitignore`は、言語、フレームワーク、IDE、ビルドツールに合わせて拡張できます。ただし、`_control/`、`current/`、`archive/`、`wip/`全体を一括で除外しないでください。
+テンプレートの`.gitignore`は、言語、フレームワーク、IDE、ビルドツールに合わせて拡張できます。`archive/discarded/`は削除不能環境の不要物だけを隔離するためGit管理から除外しますが、`_control/`、`current/`、`archive/`、`wip/`全体を一括で除外しないでください。

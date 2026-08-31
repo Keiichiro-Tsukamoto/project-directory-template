@@ -30,7 +30,31 @@ class TemplateValidationTest(unittest.TestCase):
 
     def copy_template(self, target: Path) -> Path:
         root = target / "template"
-        shutil.copytree(self.source, root)
+        for directory in ("_control", "wip", "current", "reference", "archive"):
+            (root / directory).mkdir(parents=True, exist_ok=True)
+        (root / "_control/project.md").write_text(
+            "# Project\n\n## Background\n\nTest.\n\n"
+            "## Purpose\n\nTest.\n\n## Goal\n\nTest.\n",
+            encoding="utf-8",
+        )
+        (root / "_control/tasks.md").write_text(
+            "# Tasks\n\n## Task List\n\n"
+            "| Task ID | Name | Status | Detail |\n"
+            "|---|---|---|---|\n"
+            "| T-001 | Test | active | wip/T-001_initialize_project.md |\n",
+            encoding="utf-8",
+        )
+        (root / "_control/context.md").write_text(
+            "# Context\n\n| Task ID | File |\n|---|---|\n",
+            encoding="utf-8",
+        )
+        (root / "_control/rules.md").write_text("# Rules\n", encoding="utf-8")
+        (root / "wip/T-001_initialize_project.md").write_text(
+            "# Task\n\n## Background\n\nTest.\n\n"
+            "## Purpose\n\nTest.\n\n## Goal\n\nTest.\n\n"
+            "## Notes\n\nTest.\n",
+            encoding="utf-8",
+        )
         return root
 
     @staticmethod
@@ -90,6 +114,14 @@ class TemplateValidationTest(unittest.TestCase):
     def test_current_template_passes(self) -> None:
         result = VALIDATOR.validate(self.source)
         self.assertTrue(result["passed"])
+
+    def test_synthetic_fixture_passes_without_source_task_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            result = VALIDATOR.validate(root)
+            self.assertTrue(result["passed"], self.failed_checks(result))
+            tasks = (root / "_control/tasks.md").read_text(encoding="utf-8")
+            self.assertIn("| T-001 | Test | active |", tasks)
 
     def test_duplicate_context_row_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -438,6 +470,64 @@ class TemplateValidationTest(unittest.TestCase):
             )
             result = VALIDATOR.validate(root)
             self.assertTrue(result["passed"], self.failed_checks(result))
+
+    def test_git_forbidden_snapshot_does_not_warn(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            snapshot = root / "reference/snapshots/source.md"
+            snapshot.parent.mkdir(parents=True, exist_ok=True)
+            snapshot.write_text("snapshot\n", encoding="utf-8")
+            self.add_descriptor(
+                root,
+                self.descriptor(
+                    **{
+                        "取得モード": "snapshot",
+                        "鮮度確認方法": "not-applicable",
+                        "キャッシュ再利用": "固定スナップショットのみ",
+                        "ローカルスナップショット": "reference/snapshots/source.md",
+                        "ローカル保存": "許可",
+                        "Git登録": "禁止",
+                    }
+                ),
+                extra_context="| T-001 | reference/snapshots/source.md |\n",
+            )
+            result = VALIDATOR.validate(root)
+            warning_names = {
+                str(item["warning"]) for item in result["warning_details"]
+            }
+            self.assertTrue(result["passed"], self.failed_checks(result))
+            self.assertFalse(
+                any(name.startswith("external_snapshot_git_forbidden:") for name in warning_names)
+            )
+
+    def test_git_approval_snapshot_still_warns(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            snapshot = root / "reference/snapshots/source.md"
+            snapshot.parent.mkdir(parents=True, exist_ok=True)
+            snapshot.write_text("snapshot\n", encoding="utf-8")
+            self.add_descriptor(
+                root,
+                self.descriptor(
+                    **{
+                        "取得モード": "snapshot",
+                        "鮮度確認方法": "not-applicable",
+                        "キャッシュ再利用": "固定スナップショットのみ",
+                        "ローカルスナップショット": "reference/snapshots/source.md",
+                        "ローカル保存": "許可",
+                        "Git登録": "要承認",
+                    }
+                ),
+                extra_context="| T-001 | reference/snapshots/source.md |\n",
+            )
+            result = VALIDATOR.validate(root)
+            warning_names = {
+                str(item["warning"]) for item in result["warning_details"]
+            }
+            self.assertIn(
+                "external_snapshot_git_requires_approval:reference/external/test-resource.md",
+                warning_names,
+            )
 
     def test_refetch_requires_cache_reuse_forbidden(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
