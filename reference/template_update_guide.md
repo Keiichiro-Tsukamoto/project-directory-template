@@ -14,6 +14,10 @@
 
 人が別の更新元を明示した場合は、その指定を当該taskで優先し、既定参照記述自体は書き換えません。
 
+既定更新元の参照記述と、取得した更新元実体を区別します。`reference/external/`は参照記述専用であり、更新元のclone、download、展開物を配置しません。
+
+更新元実体が必要な場合は、activeタスクの`wip/T-XXX/.tmp/template-source/`へ置きます。必要なファイルだけを取得できる場合はそれを優先し、リポジトリ全体のcloneを必須にしません。この一時配置は標準の`/wip/T-*/.tmp/`除外によりGitとcontextの対象外とし、配置のために`.gitignore`を個別変更しません。プロジェクト外の場所を通常運用の前提にしません。
+
 更新元がローカルプロジェクト外にある場合は、`wip/T-XXX/template_update_source.md`へ次を記録し、その参照記録をactive Task IDのcontextへ登録してから更新元を読みます。
 
 - 種別：`local-template-source`
@@ -24,6 +28,8 @@
 - プロジェクトへの直接反映：`禁止`
 
 参照記録にない更新元ファイルは読みません。比較対象を増やす必要がある場合は、理由と正確な相対パスを人へ示し、許可後に参照記録を更新します。更新元のrevision、取得日時、実際に比較したファイル、読み取れなかった情報と影響は移行報告へ記録します。
+
+contextへ登録するのはWIP参照記録です。更新元実体内の`rules.md`、`template_update_guide.md`その他のファイルはcontextへ直接登録せず、参照記録が許可する相対パスとして読みます。
 
 更新元がWebやGitHubなどの外部リソースだけにある場合は、既存の外部リソース規則と参照記述を使います。ローカル更新元の参照記録を、外部探索、download、clone、認証、ローカル保存の許可として扱いません。
 
@@ -80,6 +86,7 @@
 - `reference/external/_state_template.md`
 - `reference/external/github_project_directory_template_release.md`
 - `reference/model_routing_and_delegation.md`
+- `reference/product_feedback.md`
 - `reference/template_update_guide.md`
 - `current/context-tools/`配下の付属ツールとテスト
 
@@ -234,6 +241,8 @@ WIP候補を反映先へ移動した場合は、検証より前にcontextの候�
 ### 8. 完了処理後の最終状態を確認する
 
 タスク完了時は、Evidenceと旧版をarchiveへ移し、task detail、`tasks.md`、contextの参照先を最終状態へ整理します。
+
+`wip/T-XXX/.tmp/template-source/`の更新元実体は通常の一時物として扱います。削除可能なら削除し、削除権限がなく移動可能なら`archive/discarded/<Task ID>/template-source/`へ移します。
 
 context整理後の最終確認では、新しい検証結果をcontextへ追加しません。OSの一時領域など、プロジェクト外の一時出力先を使います。最終確認に合格したら一時出力を削除できます。
 

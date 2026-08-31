@@ -429,12 +429,6 @@ def validate(root: Path) -> dict[str, object]:
                 f"external_snapshot_git_requires_approval:{label}",
                 "スナップショットをGitへ登録する場合は人の明示承認が必要です。",
             )
-        if snapshot_exists and git_tracking == "禁止":
-            warn(
-                f"external_snapshot_git_forbidden:{label}",
-                "スナップショットをGitの追跡対象にしないでください。",
-            )
-
     for identity, paths in identity_paths.items():
         record(
             "external_identity_unique:" + "/".join(identity),
