@@ -90,12 +90,14 @@ git status --short
 git branch --show-current
 ```
 
-既存の`.gitignore`、CONTRIBUTING、開発ガイド、ブランチ方針を優先します。既存の`.gitignore`を上書きせず、必要に応じて次の3行だけを統合します。
+既存の`.gitignore`、CONTRIBUTING、開発ガイド、ブランチ方針を優先します。既存の`.gitignore`を上書きせず、必要に応じて次のパターンだけを統合します。
 
 ```gitignore
 /wip/.context-state/
 /wip/T-*/.tmp/
 /archive/discarded/
+.DS_Store
+.~lock.*#
 ```
 
 追加後は「2. プロジェクトを初期化する」へ進みます。
@@ -214,7 +216,7 @@ python3 current/context-tools/context_snapshot.py check
 
 ### 7. 必要に応じて外部資料を指定する
 
-ConfluenceやGoogle Driveなどの外部資料を使う場合は、対象、取得範囲、使用する版をLLMへ伝え、`reference/external/`の参照記述を作成するよう依頼します。外部のドライブ、サイト、フォルダ全体を探索させないでください。
+ConfluenceやGoogle Driveなどの外部資料を使う場合は、対象resource、今回のTaskで必要な範囲、使用する版をLLMへ伝え、`reference/external/`の参照記述を作成するよう依頼します。参照記述はresource自体の境界を固定し、Task固有のsheet、列、slide、page等は実行時状態で扱います。外部のドライブ、サイト、フォルダ全体を探索させないでください。
 
 外部リソースの閲覧権限は、変更やローカル保存の許可を意味しません。外部への書き込みは、更新先と操作を確認したうえで明示的に承認します。アクセストークンや認証情報をプロジェクトファイルへ記録しないでください。
 

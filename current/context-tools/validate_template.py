@@ -12,7 +12,7 @@ from pathlib import Path
 REQUIRED_DIRECTORIES = ("_control", "wip", "current", "reference", "archive")
 REQUIRED_CONTROL_FILES = ("project.md", "tasks.md", "context.md", "rules.md")
 ALLOWED_STATUSES = {"pending", "active", "blocked", "done"}
-EXTERNAL_FIELDS = (
+EXTERNAL_FIELDS_V2 = (
     "スキーマ版",
     "サービス",
     "ワークスペース",
@@ -32,7 +32,7 @@ EXTERNAL_FIELDS = (
     "Git登録",
     "アクセス上の注意",
 )
-NONEMPTY_EXTERNAL_FIELDS = (
+NONEMPTY_EXTERNAL_FIELDS_V2 = (
     "スキーマ版",
     "サービス",
     "ワークスペース",
@@ -48,6 +48,45 @@ NONEMPTY_EXTERNAL_FIELDS = (
     "ローカル保存",
     "Git登録",
 )
+EXTERNAL_FIELDS_V3 = (
+    "スキーマ版",
+    "サービス",
+    "ワークスペース",
+    "リソースID",
+    "ロケーター",
+    "対象オブジェクト",
+    "構造",
+    "構成単位",
+    "構成規則",
+    "変更性",
+    "取得モード",
+    "期待するリビジョン",
+    "鮮度確認方法",
+    "キャッシュ再利用",
+    "検証不能時",
+    "ローカルスナップショット",
+    "ローカル保存",
+    "Git登録",
+    "アクセス上の注意",
+)
+NONEMPTY_EXTERNAL_FIELDS_V3 = tuple(
+    field
+    for field in EXTERNAL_FIELDS_V3
+    if field
+    not in {
+        "ロケーター",
+        "期待するリビジョン",
+        "ローカルスナップショット",
+        "アクセス上の注意",
+    }
+)
+V3_LEGACY_FIELDS = {"リソース種別", "取得範囲", "代替手段"}
+ALLOWED_EXTERNAL_STRUCTURES = {
+    "atomic",
+    "composite",
+    "fixed-collection",
+    "dynamic-collection",
+}
 ALLOWED_RETRIEVAL_MODES = {"live", "pinned", "snapshot"}
 ALLOWED_MUTABILITY = {"mutable", "immutable"}
 ALLOWED_FRESHNESS_METHODS = {
@@ -271,33 +310,65 @@ def validate(root: Path) -> dict[str, object]:
             not duplicate_fields,
             f"duplicates={duplicate_fields}",
         )
-        missing = [field for field in EXTERNAL_FIELDS if field not in fields]
+        schema_version = fields.get("スキーマ版", "")
+        expected_fields = (
+            EXTERNAL_FIELDS_V3 if schema_version == "3" else EXTERNAL_FIELDS_V2
+        )
+        required_fields = (
+            NONEMPTY_EXTERNAL_FIELDS_V3
+            if schema_version == "3"
+            else NONEMPTY_EXTERNAL_FIELDS_V2
+        )
+        missing = [field for field in expected_fields if field not in fields]
         record(
             f"external_fields_present:{label}",
             not missing,
             f"missing={missing}",
         )
-        empty = [field for field in NONEMPTY_EXTERNAL_FIELDS if not fields.get(field)]
+        empty = [field for field in required_fields if not fields.get(field)]
         record(
             f"external_required_values:{label}",
             not empty,
             f"empty={empty}",
         )
 
-        schema_version = fields.get("スキーマ版", "")
         mutability = fields.get("変更性", "")
         mode = fields.get("取得モード", "")
         freshness_method = fields.get("鮮度確認方法", "")
         cache_reuse = fields.get("キャッシュ再利用", "")
         unverifiable_action = fields.get("検証不能時", "")
         fallback = fields.get("代替手段", "")
+        structure = fields.get("構造", "")
+        component_unit = fields.get("構成単位", "")
+        component_rule = fields.get("構成規則", "")
         local_storage = fields.get("ローカル保存", "")
         git_tracking = fields.get("Git登録", "")
         record(
             f"external_schema_version:{label}",
-            schema_version == "2",
+            schema_version in {"2", "3"},
             schema_version,
         )
+        if schema_version == "3":
+            legacy_fields = sorted(V3_LEGACY_FIELDS.intersection(fields))
+            record(
+                f"external_v3_legacy_fields_absent:{label}",
+                not legacy_fields,
+                f"legacy_fields={legacy_fields}",
+            )
+            record(
+                f"external_structure_allowed:{label}",
+                structure in ALLOWED_EXTERNAL_STRUCTURES,
+                structure,
+            )
+            atomic_shape = component_unit == "なし" and component_rule == "なし"
+            record(
+                f"external_structure_components:{label}",
+                atomic_shape
+                if structure == "atomic"
+                else component_unit not in {"", "なし"}
+                and component_rule not in {"", "なし"},
+                f"structure={structure}, unit={component_unit}, rule={component_rule}",
+            )
         record(
             f"external_mutability_allowed:{label}",
             mutability in ALLOWED_MUTABILITY,
@@ -323,11 +394,12 @@ def validate(root: Path) -> dict[str, object]:
             unverifiable_action in ALLOWED_UNVERIFIABLE_ACTIONS,
             unverifiable_action,
         )
-        record(
-            f"external_fallback_allowed:{label}",
-            fallback in ALLOWED_FALLBACKS,
-            fallback,
-        )
+        if schema_version != "3":
+            record(
+                f"external_fallback_allowed:{label}",
+                fallback in ALLOWED_FALLBACKS,
+                fallback,
+            )
         record(
             f"external_local_storage_allowed_value:{label}",
             local_storage in ALLOWED_STORAGE_VALUES,
@@ -367,15 +439,16 @@ def validate(root: Path) -> dict[str, object]:
         registered_snapshot_fallback = (
             unverifiable_action == "登録スナップショットを旧版として使用"
         )
-        record(
-            f"external_fallback_unverifiable_consistency:{label}",
-            (fallback == "local-snapshot") == registered_snapshot_fallback,
-            f"fallback={fallback}, unverifiable={unverifiable_action}",
-        )
+        if schema_version != "3":
+            record(
+                f"external_fallback_unverifiable_consistency:{label}",
+                (fallback == "local-snapshot") == registered_snapshot_fallback,
+                f"fallback={fallback}, unverifiable={unverifiable_action}",
+            )
         record(
             f"external_snapshot_fallback_not_redundant:{label}",
-            mode != "snapshot" or fallback == "none",
-            f"mode={mode}, fallback={fallback}",
+            mode != "snapshot" or not registered_snapshot_fallback,
+            f"mode={mode}, unverifiable={unverifiable_action}",
         )
 
         record(
@@ -384,14 +457,12 @@ def validate(root: Path) -> dict[str, object]:
             "no token, session, or signed-URL pattern",
         )
 
-        identity = tuple(
-            fields.get(field, "")
-            for field in ("サービス", "ワークスペース", "リソース種別", "リソースID")
-        )
+        identity_fields = ["サービス", "ワークスペース", "リソースID"]
+        identity = tuple(fields.get(field, "") for field in identity_fields)
         if all(identity):
             identity_paths.setdefault(identity, set()).add(label)
 
-        needs_snapshot = mode == "snapshot" or fallback == "local-snapshot"
+        needs_snapshot = mode == "snapshot" or registered_snapshot_fallback
         snapshot_value = fields.get("ローカルスナップショット", "")
         snapshot_path, snapshot_is_relative = safe_relative_path(snapshot_value)
         snapshot_within_root = snapshot_is_relative and path_within_root(
