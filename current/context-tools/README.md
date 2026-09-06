@@ -10,9 +10,9 @@
 python3 current/context-tools/validate_template.py . --output wip/T-XXX/validation.json
 ```
 
-外部リソースについては、schema v2、1ファイル1リソース、変更性、取得モード、pinnedリビジョン、鮮度・cache・fallbackの整合性、snapshotの存在とcontext登録、保存可否、識別情報の重複、明らかな署名URLやトークン形式を確認します。`reference/external/`と、登録済みの`wip/<Task ID>/reference/external/`を対象にします。外部サービスへの接続、実際の権限、リモートリビジョンは実行時に確認してください。
+外部リソースについては、schema v2/v3、1ファイル1リソース、変更性、取得モード、pinnedリビジョン、鮮度・cache・snapshot方針の整合性、snapshotの存在とcontext登録、保存可否、識別情報の重複、明らかな署名URLやトークン形式を確認します。v3では4構造類型と構成単位・構成規則も検査します。`reference/external/`と、登録済みの`wip/<Task ID>/reference/external/`を対象にします。外部サービスへの接続、実際の権限、リモートリビジョンは実行時に確認してください。
 
-`要承認`や`Git登録: 禁止`など、人の判断またはGit状態の確認が必要な項目はwarningとして出力します。warningは検証失敗を意味しません。
+`要承認`など、人の判断が必要な項目はwarningとして出力する場合があります。`Git登録: 禁止`は正しい方針値であり、それだけではwarningにしません。warningは検証失敗を意味しません。
 
 ## Create Hash Snapshot
 

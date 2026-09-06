@@ -91,6 +91,33 @@ class TemplateValidationTest(unittest.TestCase):
         body = "\n".join(f"- {key}: {value}" for key, value in values.items())
         return f"# 外部リソース: テスト資料\n\n{body}\n"
 
+    @staticmethod
+    def descriptor_v3(**overrides: str) -> str:
+        values = {
+            "スキーマ版": "3",
+            "サービス": "example-service",
+            "ワークスペース": "workspace-1",
+            "リソースID": "document-1",
+            "ロケーター": "https://example.invalid/document-1",
+            "対象オブジェクト": "指定IDのdocument全体。リンク先は含まない",
+            "構造": "composite",
+            "構成単位": "section",
+            "構成規則": "document内のsection",
+            "変更性": "mutable",
+            "取得モード": "live",
+            "期待するリビジョン": "",
+            "鮮度確認方法": "revision",
+            "キャッシュ再利用": "同一版確認時のみ",
+            "検証不能時": "停止",
+            "ローカルスナップショット": "",
+            "ローカル保存": "要承認",
+            "Git登録": "要承認",
+            "アクセス上の注意": "",
+        }
+        values.update(overrides)
+        body = "\n".join(f"- {key}: {value}" for key, value in values.items())
+        return f"# 外部リソース: テスト資料\n\n{body}\n"
+
     def add_descriptor(
         self,
         root: Path,
@@ -366,6 +393,53 @@ class TemplateValidationTest(unittest.TestCase):
             result = VALIDATOR.validate(root)
             self.assertTrue(result["passed"], self.failed_checks(result))
 
+    def test_v3_structures_pass(self) -> None:
+        fixtures = (
+            {"構造": "atomic", "構成単位": "なし", "構成規則": "なし"},
+            {"構造": "composite", "構成単位": "sheet", "構成規則": "workbook内のsheet"},
+            {"構造": "fixed-collection", "構成単位": "file", "構成規則": "ID=a,b"},
+            {"構造": "dynamic-collection", "構成単位": "issue", "構成規則": "state=open"},
+        )
+        for index, fixture in enumerate(fixtures):
+            with self.subTest(structure=fixture["構造"]):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = self.copy_template(Path(directory))
+                    self.add_descriptor(
+                        root,
+                        self.descriptor_v3(
+                            **fixture,
+                            **{"リソースID": f"resource-{index}"},
+                        ),
+                    )
+                    result = VALIDATOR.validate(root)
+                    self.assertTrue(result["passed"], self.failed_checks(result))
+
+    def test_v3_atomic_rejects_component_definition(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            self.add_descriptor(
+                root,
+                self.descriptor_v3(
+                    **{"構造": "atomic", "構成単位": "page", "構成規則": "page全体"}
+                ),
+            )
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn(
+                "external_structure_components:reference/external/test-resource.md",
+                failures,
+            )
+
+    def test_v3_rejects_legacy_scope_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            content = self.descriptor_v3() + "- 取得範囲: A sheet\n"
+            self.add_descriptor(root, content)
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertIn(
+                "external_v3_legacy_fields_absent:reference/external/test-resource.md",
+                failures,
+            )
+
     def test_missing_external_metadata_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = self.copy_template(Path(directory))
@@ -607,6 +681,16 @@ class TemplateValidationTest(unittest.TestCase):
             root = self.copy_template(Path(directory))
             self.add_descriptor(root, self.descriptor(), name="first.md")
             self.add_descriptor(root, self.descriptor(), name="second.md")
+            failures = self.failed_checks(VALIDATOR.validate(root))
+            self.assertTrue(
+                any(name.startswith("external_identity_unique:") for name in failures)
+            )
+
+    def test_duplicate_external_identity_across_v2_and_v3_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_template(Path(directory))
+            self.add_descriptor(root, self.descriptor(), name="v2.md")
+            self.add_descriptor(root, self.descriptor_v3(), name="v3.md")
             failures = self.failed_checks(VALIDATOR.validate(root))
             self.assertTrue(
                 any(name.startswith("external_identity_unique:") for name in failures)
