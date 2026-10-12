@@ -1,280 +1,55 @@
 <!-- project-directory-template:source-readme -->
-# Project Directory Template
+# 複数プロジェクトの作業領域
 
-## 本プロダクトが解決する課題
+必要な資料だけを読み、作業途中の資料と確定した成果物を分けて管理するための構成です。一つの作業領域に複数のprojectを置き、共通規則を一か所で管理します。
 
-LLMと長期間プロジェクトを進めると、過去資料や無関係なファイルの読み込みによるトークン消費、古い方針の混入、成果物の現行版が分からないといった問題が起こりやすくなります。
+## はじめに
 
-このテンプレートは、タスクごとに必要なファイルだけをLLMへ渡し、作業中・現行・旧版を明確に分けます。人による承認を保ちながら、コンテキスト量、モデル利用コスト、確認時間を抑えたい個人のプロジェクト作業に利用できます。
+これはv2.0.0の作業領域版です。v1系を利用中の場合は、[旧版からの移行](reference/template_update_guide.md)を読み、既存環境へ一式を上書きしないでください。
 
-## 本プロダクトの仕組み
+新規作成ではGitHubの「Use this template」を利用できます。初回の自動処理はREADMEを作業領域用に変更し、配布元のLICENSEを`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名します。処理を利用できない場合は[手動初期化](reference/template_update_guide.md#新規作成時の手動初期化)に従ってください。既存環境の移行でこの初期化処理を実行しません。
 
-以下の仕組みにより、人とLLMの両方がファイルの役割と状態を理解しやすい形で、コンテキスト量と管理コストを抑えます。
+このディレクトリ全体を、利用するLLMの作業対象として指定してください。同じ利用者・LLM・プログラムに見せてよい情報だけを入れます。閲覧権限の異なる案件は別の作業領域に分け、アクセス権限は利用環境で設定してください。Markdownの規則は、技術的なアクセス制限にはなりません。
 
-1. `_control/context.md`に、進行中のタスクで参照すべきファイルの一覧を管理し、LLMはその一覧にあるファイルだけを読みます。
-2. 成果物を`wip/`（作業中）、`current/`（現行）、`archive/`（旧版）へ分け、参照すべき版をディレクトリ上でも判別できるようにします。
-3. Git差分またはハッシュ比較を使い、人が管理ファイル、入力資料、成果物を変更した場合にも早期に検出できるようにします。
-4. ファイル確認や定型作業には、決定的なツールまたは必要条件を満たす低コストモデルを優先し、モデル利用コストを抑えます。
+新規利用時は、次の指示から始めます。
 
-## バージョンと安定版
+> 最初に`_control/rules.md`を読み、その規則に従って、新規projectの作成と初期化を進めてください。
 
-安定版は[GitHub Releases](https://github.com/Keiichiro-Tsukamoto/project-directory-template/releases)で公開し、`vMAJOR.MINOR.PATCH`形式のタグで固定します。再現可能な導入、既存プロジェクトの更新元、問題発生時の切り戻しには、使用したReleaseのタグまたはcommitを指定してください。
+Project IDを決め、背景・目的・目標を初期化タスクで整理します。既存projectを再開する場合は、次のように対象を指定します。
 
-`main`は次の安定版候補を統合する場所です。GitHubの「Use this template」は`main`を参照するため、厳密に同じ版を使う必要がある場合は、ReleaseのSource codeを取得してローカルから導入します。公開済みタグの参照先は後から変更しません。
+> 最初に`_control/rules.md`を読み、Project ID「対象のID」の作業を再開してください。
 
-## 本プロダクトの導入方法
+## 配置
 
-### 0. 導入方法を選ぶ
+| 場所 | 内容 |
+|---|---|
+| `_control/` | 共通規則・管理表・ガイド・管理プログラム。管理作業の途中資料は`wip/`、完了記録は`archive/` |
+| `projects/<project-id>/` | 案件ごとの定義・タスク・成果物・参照資料 |
+| `library/` | 全projectで共通利用する資料・スキル |
+| `profiles/<profile-id>/` | 利用者固有の手順・素材・スキル。必要時に作成 |
 
-次のいずれかへ進みます。
+各projectは`_control/`、`wip/`、`current/`、`reference/external/`、`archive/discarded/`を持ちます。project用の`rules.md`は作らず、共通規則を使います。既存ソースコード等の配置を一律に変更する仕組みではありません。
 
-- 新規プロジェクトでGitを使わない：1-A → 2
-- 新規プロジェクトでGitを使う：1-B → 2
-- 既存プロジェクトへ追加する：1-C → 2
-- 旧版テンプレートを利用中のプロジェクトを更新する：1-D
+通常の作業で全project・全資料を読み込ませる必要はありません。開始時の選択と、対象タスクの入力一覧に従って必要な資料を読みます。
 
-Python 3がなくても基本運用は可能です。付属の静的検証とハッシュ比較を使う場合はPython 3が必要です。外部リソース連携とモデル分業は任意です。
+## 必要な機能
 
-このREADMEではPythonの実行コマンドを`python3`と表記しています。利用環境に応じて`python`または`py`へ読み替えてください。
+基本操作はMarkdownの読み書きで行え、PythonやGitは必須ではありません。成果物の確定・反映・完了等は、規則に従って人の承認を得ます。
 
-### 1-A. 新規プロジェクトへ導入する（Gitを使わない場合）
+同じPC・同じアプリの複数チャットで管理情報を並行更新する場合は、[共有管理操作の手順](_control/tools/shared_operations/README.md)に従ってください。対応する操作だけPython 3.10以降とOSのロック機能を使います。未対応の操作は、関係する書込みを止めて行います。別PC・別アプリ・同期サービスをまたぐ同時更新の安全性は保証しません。
 
-隠しファイルの`.gitignore`を含め、テンプレートの内容を新しいプロジェクトルートへコピーします。
+## 既存環境への導入
 
-コピー後、プロジェクト固有の初期状態へ切り替えます。
+共通機構の更新案を作る場合は、次のように指示できます。
 
-1. `LICENSE`を`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名します。
-2. `.github/project-readme.md`を基に、プロジェクト名を反映したルートREADMEを作ります。
-3. `.github/project-readme.md`、`.github/workflows/initialize-project-readme.yml`、`CONTRIBUTING.md`、`SECURITY.md`を削除します。
+> `_control/rules.md`に従い、`library/current/skills/template-update/SKILL.md`を使って既定更新元から更新案を作成してください。反映は承認まで行わないでください。
 
-`PROJECT_DIRECTORY_TEMPLATE_LICENSE`はテンプレート由来部分のMIT License表示です。派生プロジェクト全体のライセンスは、必要に応じて別のルート`LICENSE`として設定します。準備後、「2. プロジェクトを初期化する」へ進みます。
+利用中の問題を報告する場合は、`library/current/skills/product-feedback/SKILL.md`を指定して下書きを依頼できます。どちらも正確なファイルを読ませる入口であり、この配置だけで各アプリへ自動登録されるとは限りません。
 
-変更検出には、付属のハッシュツールを利用できます。
+この一式を既存環境へ上書きコピーしないでください。ルート・既存コード・README・固有資料を保持する配置対応と復元手順を用意し、承認後に切り替えます。作業環境の移行と、公開する製品の更新は別の操作です。
 
-```text
-python3 current/context-tools/context_snapshot.py snapshot
-python3 current/context-tools/context_snapshot.py check
-```
+## 確認範囲と版の選択
 
-### 1-B. 新規プロジェクトへ導入する（Gitを使う場合）
+ChatGPT Workの単一チャットで、project作成、承認後の初期化、パスで指定したフィードバックスキルの利用、成果物配置とタスク完了を1回確認しています。全モデル・全アプリ、自動スキル発見、実コネクタ、同時更新を確認した結果ではありません。実消費トークンや料金の削減は測定していません。
 
-GitHub上でこのリポジトリの「Use this template」から作成した場合、作成直後に`Initialize project README` workflowが1回だけ動作します。workflowは新しいリポジトリ名を見出しにしたプロジェクト用READMEへ切り替え、元テンプレートの`LICENSE`を`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名し、配布元専用のCONTRIBUTING、SECURITY、初期化workflow、READMEひな型を削除してコミットします。完了後は「2. プロジェクトを初期化する」へ進みます。
-
-READMEが`Project Directory Template`のままの場合は、新しいリポジトリのActions画面で`Initialize project README`の実行結果を確認してください。作成時にGitHub Actionsが無効だった場合は、有効化後にこのworkflowを手動実行できます。書き込み権限またはデフォルトブランチへの直接pushがポリシーで禁止されている場合、自動初期化は失敗します。その場合はREADMEをプロジェクト用の内容へ手動で置き換え、`LICENSE`を`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名し、`.github/project-readme.md`、`.github/workflows/initialize-project-readme.yml`、`CONTRIBUTING.md`、`SECURITY.md`を削除してコミットします。既にREADMEを編集した場合や追加コミットがある場合、workflowは誤上書きを避けるため何も変更しません。
-
-GitHubのテンプレート機能を使わずローカルへコピーする場合は、テンプレートを新しいプロジェクトルートへコピーし、ルートREADMEをプロジェクト用に置き換え、`LICENSE`を`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名し、`.github/project-readme.md`、`.github/workflows/initialize-project-readme.yml`、`CONTRIBUTING.md`、`SECURITY.md`を削除してから、その場所でGitを初期化します。
-
-```text
-git init
-git status --short
-```
-
-初回はファイルが`??`と表示されます。秘密情報や不要な生成物がないことと、`.gitignore`の内容を確認してから初期baselineを作ります。
-
-```text
-git add .
-git diff --cached --stat
-git commit -m "Initialize project"
-```
-
-stageとcommitは人が実行するか、LLMへ対象と操作を明示的に許可します。Gitはローカルの差分検出だけでも利用でき、リモートやpush権限は必須ではありません。完了後は「2. プロジェクトを初期化する」へ進みます。
-
-### 1-C. 既存プロジェクトへ導入する
-
-既存のソースコード、設定、テスト、アセットの構成は変更せず、テンプレートの管理用ディレクトリとファイルを追加します。同名の管理ファイルやディレクトリが既にある場合は上書きせず、内容と運用方針を確認してから統合します。既存リポジトリでは`git init`を実行しません。
-
-既存のルートREADME、`LICENSE`、CONTRIBUTING、SECURITYを上書きしません。テンプレート共通ファイルを取り込む場合は、元テンプレートの`LICENSE`を`PROJECT_DIRECTORY_TEMPLATE_LICENSE`という名前で追加し、テンプレート由来部分の表示として保持します。既存プロジェクト全体のライセンスは変更しません。
-
-```text
-git status --short
-git branch --show-current
-```
-
-既存の`.gitignore`、CONTRIBUTING、開発ガイド、ブランチ方針を優先します。既存の`.gitignore`を上書きせず、必要に応じて次のパターンだけを統合します。
-
-```gitignore
-/wip/.context-state/
-/wip/T-*/.tmp/
-/archive/discarded/
-.DS_Store
-.~lock.*#
-```
-
-追加後は「2. プロジェクトを初期化する」へ進みます。
-
-### 1-D. 旧版テンプレートを利用中のプロジェクトを更新する
-
-既存プロジェクトのルートREADME、ルート`LICENSE`、`_control/project.md`、`tasks.md`、`context.md`、進行中タスク、成果物を保持したまま、テンプレート共通ファイルだけの更新候補をWIPへ作ります。MIT公開版へ更新する場合は、元テンプレートの`LICENSE`を既存プロジェクトの`PROJECT_DIRECTORY_TEMPLATE_LICENSE`として追加または更新します。最新版テンプレート一式を既存プロジェクトへ上書きしないでください。
-
-登録済みの既定更新元を使用する場合は、LLMへ次の指示を渡します。詳細手順の正本は`reference/template_update_guide.md`です。
-
-> 登録済みの既定更新元を使って、このプロジェクトのテンプレート更新を開始してください。
-
-既定参照がない旧プロジェクト、または別の更新元を使用する場合は、その正確な場所を指定して次の指示を渡します。
-
-> `<更新元テンプレートの正確な場所>`を更新元として、このプロジェクトのテンプレート更新を開始してください。既存の`_control/rules.md`を最初に読み、更新元の`reference/template_update_guide.md`に従ってください。
-
-LLMは指定場所を更新元として記録し、変更対象と保持対象を提示します。競合がある場合はそこで停止します。WIPの候補と検証結果を確認してから、反映するファイルを承認してください。
-
-詳しい分類、検証、ロールバックは`reference/template_update_guide.md`を参照してください。この更新手順は既存プロジェクトの初期化をやり直すものではないため、「2. プロジェクトを初期化する」には進みません。
-
-### 2. プロジェクトを初期化する
-
-LLMへ次の指示を渡します。
-
-> このフォルダを作業ディレクトリとして扱ってください。最初に `_control/rules.md` を読み、その後はルールに従い、必要なファイルだけを読んでください。プロジェクト全体を勝手にスキャンせず、`tasks.md` の `active` タスクに従ってください。
-
-初期状態では`T-001: Initialize project`が用意されています。LLMから確認を受けながら、プロジェクトの背景、目的、達成目標を伝えます。作成された`_control/project.md`を確認し、問題がなければ承認します。
-
-付属ツールを利用できる場合は、初期化後にテンプレートの整合性を確認します。
-
-```text
-python3 current/context-tools/validate_template.py . --output wip/T-001/validation.json
-```
-
-## 本プロダクトの使い方
-
-### 1. ディレクトリの役割を確認する
-
-```text
-workspace/
-├── _control/   プロジェクト、タスク、参照ファイル、ルールの管理
-├── wip/        作業中・承認待ちの成果物
-├── current/    現在有効な成果物と任意ツール
-├── reference/  必要な場合だけ読む参考資料
-└── archive/    旧版・完了済み・置換済み資料
-```
-
-通常、人が主に確認するのは、作業依頼の内容を記したtask detail fileと、LLMが作成した`wip/`の成果物です。`_control/rules.md`は運用上の正本であり、READMEと内容が食い違う場合は`rules.md`を優先します。
-
-### 2. LLMへ作業を依頼する
-
-作業の目的、完了条件、参照してほしいファイルを伝え、LLMへ新しいタスクの登録を依頼します。既にタスクが進行中の場合は、完了または中断の扱いを決めてから次のタスクを開始します。
-
-参照してほしいファイルが後から増えた場合は、そのファイルを現在タスクの`context.md`へ追加するよう依頼します。`context.md`は、LLMが今回のタスクで正式な入力として扱う既存ファイルを示します。ディレクトリに置かれているだけの未登録ファイルを、LLMが勝手に探索または採用することはありません。
-
-登録済み入力だけではGoalを正確に達成できない場合、LLMは不足している情報、必要な理由、受入可能な形式をまとめて提言します。
-
-- 既存ファイルがある場合：正確なパスを示し、現在タスクのcontextへ登録してから作業を続けます。
-- 必要な入力をまだ持っていない場合：入力を作成する別タスクを追加できます。元タスクを`blocked`、入力作成タスクを`active`として進め、入力完成後に元タスクへ戻ります。
-- 入力を作らない場合：Goal、前提、受入条件を見直します。
-
-登録済み入力を使った解決方法、ツール選択、WIPでの可逆的な試行はLLMへ任せられます。contextによる入力管理は、解決手順を細かく固定するためのものではありません。
-
-最初に作成したtask detailは、完全である必要はありません。調査、試作、検証、feedbackで理解が変わった場合は、見出し名ではなくタスクの意味への影響で更新を判断します。意味を変えない明確化や事実訂正は同じタスクで行い、解く問題、必要な成果、完了判定の意味が変わる場合は、根拠と影響を確認してから承認します。別のタスクに相当する場合は、同じタスクを広げ続けず新しいタスクへ分けます。
-
-複数タスクへ影響が残り、将来その理由を再検討する必要がある重要な設計判断には、任意でADRを使えます。すべての判断には作成せず、必要な場合だけ`reference/architecture_decision_records.md`をcontextへ登録します。
-
-### 3. 別のセッション・サービス・LLMへ作業を引き継ぐ
-
-activeタスクの途中で、別のセッション、Claude、ChatGPT／Codex、その他のLLM環境へ移す場合は、移行前のLLMへ次のように依頼します。
-
-> 現在のactiveタスクを、会話履歴を利用できない別の作業環境へ引き継げるようにしてください。最後に確認できた状態、完了済み作業と検証結果、次に行う最小の作業、未解決事項、必要な人判断、再開時に優先して読むcontext登録済みファイルを、運用ガイドに従って短いWIP引継ぎ記録へ整理し、contextへ登録してください。入力本文や会話履歴全体は複製しないでください。
-
-現在タスクを完了し、次タスクを別環境で開始する場合は、完了前に次のように依頼します。
-
-> 現在タスクの完了後、次タスクを会話履歴のない別環境で開始できるようにしてください。完了タスクのcontext全体は引き継がず、次タスクのtask detailへ、確定した結果、次タスクに必要な理由、未解決事項、必要な参照先を記載してください。情報量が多い場合だけ次タスク側のWIP引継ぎ記録へ分離し、次タスク開始時に必要なファイルを新しいTask IDでcontextへ登録できる状態にしてください。
-
-移行先では、通常と同じ作業開始指示を渡します。LLMは`rules.md`、`tasks.md`、`context.md`を読み、contextへ登録された引継ぎ記録から再開地点を確認できます。製品固有のmemory、会話共有機能、エクスポート機能は必須ではありません。
-
-次タスクが決まっていない状態で環境を変更した場合、新しいLLMは`project.md`と`tasks.md`からpending候補を確認し、どのタスクを開始するかを人へ確認します。直近の完了タスクや`archive/`を自動的には読みません。完了後も残すべき作業がある場合は、移行前にpendingタスクとして登録してください。
-
-同じセッションで継続する場合、短時間の中断、task detailとWIP成果物だけで次の作業が明らかな場合は、引継ぎ記録を作る必要はありません。タスク間でも次のtask detailだけで十分なら、別の`handoff.md`は不要です。詳しい作成条件と最小形式は`reference/operation_guide.md`を参照してください。
-
-### 4. 成果物を確認する
-
-LLMが作成した`wip/`の成果物を確認します。
-
-- 問題がある場合：同じタスクのまま修正を依頼します。
-- 問題がない場合：成果物の確定とタスク完了を明示的に承認します。
-
-承認すると、LLMは継続利用する成果物を`current/`へ移し、旧版や完了資料を`archive/`へ整理します。承認前の成果物が自動的に現行版になることはありません。
-
-### 5. 現行成果物の修正を依頼する
-
-修正対象となる`current/`のファイルを指定し、新しいタスクとして修正を依頼します。LLMは現行版を直接変更せず、修正版を`wip/`へ作成します。
-
-修正版を承認すると、旧現行版が`archive/`へ移り、修正版が`current/`になります。過去タスクの成果物を再利用したい場合も、対象ファイルを新しいタスクの入力として指定します。
-
-### 6. 必要に応じて変更を確認する
-
-Gitを使う場合は、現在タスクの管理ファイル、入力、成果物に対象を限定して差分を確認します。
-
-```text
-git status --short -- _control wip/T-XXX_name.md wip/T-XXX path/from/context.md
-git diff --name-status -- _control wip/T-XXX_name.md wip/T-XXX path/from/context.md
-```
-
-Gitを使わない場合、またはGitと独立して確認したい場合はハッシュ比較を利用します。
-
-```text
-python3 current/context-tools/context_snapshot.py snapshot
-python3 current/context-tools/context_snapshot.py check
-```
-
-理由が分からない変更が検出された場合は、作業を続ける前にLLMへ変更理由の確認を依頼します。
-
-### 7. 必要に応じて外部資料を指定する
-
-ConfluenceやGoogle Driveなどの外部資料を使う場合は、対象resource、今回のTaskで必要な範囲、使用する版をLLMへ伝え、`reference/external/`の参照記述を作成するよう依頼します。参照記述はresource自体の境界を固定し、Task固有のsheet、列、slide、page等は実行時状態で扱います。外部のドライブ、サイト、フォルダ全体を探索させないでください。
-
-外部リソースの閲覧権限は、変更やローカル保存の許可を意味しません。外部への書き込みは、更新先と操作を確認したうえで明示的に承認します。アクセストークンや認証情報をプロジェクトファイルへ記録しないでください。
-
-### 8. 必要に応じてモデル分業を指定する
-
-モデルを選べる環境では、ファイル確認、形式修正、既知仕様の検査など、範囲と合否が明確な作業を低コストモデルへ委譲できます。新規設計、規則の矛盾、高影響で検証困難な判断には上位モデルを使います。
-
-人が個別のモデルを指定しなくても、`rules.md`に従って適切な方法を選ぶようLLMへ依頼できます。品質に不安がある場合は、使用モデル、検証結果、再作業の有無を確認してください。
-
-### 9. 問題が発生した場合
-
-- 必要な資料が読み込まれていない：対象ファイルを明示し、現在タスクの`context.md`へ追加するよう依頼します。
-- 必要な入力がまだ存在しない：入力作成タスクを追加するか、Goalや受入条件を見直します。
-- 古い成果物が使われている可能性がある：正とするファイルを推測させず、人が対象を指定します。
-- 無関係なGit差分がある：破棄や退避をさせず、対象と変更理由の説明を求めます。
-- 外部資料へアクセスできない：未登録の代替情報源を使わせず、必要な権限やスナップショットを確認します。
-- 委譲した作業を検証できない：推測で続けさせず、上位モデルまたは人へ判断を戻します。
-
-LLMの具体的な読み込み順、タスクのライフサイクル、context登録基準、検証方法は`reference/operation_guide.md`に分離しています。通常は読む必要がなく、運用確認や問題調査が必要な場合だけ参照します。
-
-## コントリビューション
-
-不具合、改善提案、Pull Requestを受け付けています。公開Issueや変更を作成する前に`CONTRIBUTING.md`を確認してください。
-
-## セキュリティ
-
-脆弱性や秘密情報を公開Issueへ投稿しないでください。非公開の報告方法は`SECURITY.md`を確認してください。
-
-## ライセンス
-
-本成果物はMIT Licenseで公開します。詳細は`LICENSE`を確認してください。
-
-Copyright (c) 2026 塚本 圭一郎 (Keiichiro Tsukamoto)
-
-## 本プロダクトの問い合わせ先
-
-- 作成者：塚本 圭一郎 (Keiichiro Tsukamoto)
-- 問い合わせ先：本リポジトリのGitHub Issues
-
-問い合わせ時は、利用環境、現在のTask ID、発生した事象、実行した検証とその結果を添えてください。秘密情報や認証情報は含めないでください。
-
-利用フィードバックをLLMで整理する場合は、次の指示を渡します。詳細は`reference/product_feedback.md`を参照してください。
-
-> このテンプレートの利用フィードバックを作成してください。`reference/product_feedback.md`に従い、実際に起きた事実と改善提案を分け、機密情報を除いたGitHub Issue用の下書きをWIPに作ってください。GitHubへの投稿は行わないでください。
-
-複数の問題は最初にWIPで整理し、関連するものだけをまとめます。Issue下書きは一度に最大3件とし、[GitHub Issues](https://github.com/Keiichiro-Tsukamoto/project-directory-template/issues/new)への投稿は内容と投稿対象について人の承認を得てから行います。
-
-## 補足事項
-
-Git、Pythonツール、外部コネクタ、モデル選択・並列実行は任意です。利用できない機能があっても、対象限定の`context.md`、成果物の状態分離、人による承認を使った基本運用は可能です。
-
-詳細が必要な場合だけ、対象ファイルを`context.md`へ登録して参照します。
-
-- 日常運用、タスクライフサイクル、context登録、検証：`reference/operation_guide.md`
-- 旧版テンプレート利用プロジェクトの更新：`reference/template_update_guide.md`
-- Git、成果物分類、権限、ハッシュ方式：`reference/git_artifact_management.md`
-- 外部リソースの取得、変更検出、エラー処理：`reference/external_resource_context.md`
-- モデル階層、作業票、並列化、エスカレーション、評価：`reference/model_routing_and_delegation.md`
-- 本テンプレートへの利用フィードバック：`reference/product_feedback.md`
-
-テンプレートの`.gitignore`は、言語、フレームワーク、IDE、ビルドツールに合わせて拡張できます。`archive/discarded/`は削除不能環境の不要物だけを隔離するためGit管理から除外しますが、`_control/`、`current/`、`archive/`、`wip/`全体を一括で除外しないでください。
+安定版は[GitHub Releases](https://github.com/Keiichiro-Tsukamoto/project-directory-template/releases)のタグで固定します。「Use this template」はmainを参照するため、同じ版の再現にはReleaseのSource codeを使用してください。v1系の公開済みタグは保持し、v2への自動移行は行いません。

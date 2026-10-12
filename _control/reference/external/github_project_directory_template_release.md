@@ -1,20 +1,21 @@
 # 外部リソース: project-directory-template stable release
 
-- スキーマ版: 2
+- スキーマ版: 3
 - サービス: other
 - ワークスペース: github.com/Keiichiro-Tsukamoto
-- リソース種別: bounded-collection
 - リソースID: github:Keiichiro-Tsukamoto/project-directory-template
 - ロケーター: https://github.com/Keiichiro-Tsukamoto/project-directory-template
+- 対象オブジェクト: 最新の安定releaseが指定する版の、作業領域版の配布ファイル群。Issues、他のrelease、default branchの未公開変更、利用者の業務資料は含めない。
+- 構造: dynamic-collection
+- 構成単位: file
+- 構成規則: draftとprereleaseを除く最新の安定releaseのtagを固定し、その版の配布ルートにある_control/、library/current/skills/template-update/、library/current/skills/product-feedback/、README.md、LICENSE、.gitignoreを対象とする。配布ルートは当該releaseの公開説明で特定する。一意に特定できない場合、または作業領域版でない場合は停止する。
 - 変更性: mutable
 - 取得モード: live
 - 期待するリビジョン:
-- 取得範囲: 最新の安定release/tag metadata、およびそのrevisionにあるreference/template_update_guide.mdがテンプレート共通fileとして分類するpath
 - 鮮度確認方法: revision
 - キャッシュ再利用: 同一版確認時のみ
 - 検証不能時: 停止
 - ローカルスナップショット:
-- 代替手段: none
 - ローカル保存: 許可
 - Git登録: 要承認
 - アクセス上の注意: 公開repositoryの読取専用参照。prereleaseとdefault branchの未release変更を既定更新元にしない。書き込み、branch、commit、push、tag、releaseは別途承認が必要。
