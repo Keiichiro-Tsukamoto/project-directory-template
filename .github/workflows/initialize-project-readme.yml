@@ -56,6 +56,16 @@ jobs:
             exit 1
           fi
 
+          if [ -e "$template_license" ]; then
+            echo "Error: template license destination already exists."
+            exit 1
+          fi
+
+          if [ ! -f "$source_contributing" ] || [ ! -f "$source_security" ]; then
+            echo "Error: source-only documents are missing."
+            exit 1
+          fi
+
           project_name="${GITHUB_REPOSITORY#*/}"
           sed "s/{{PROJECT_NAME}}/${project_name}/g" "$readme_template" > README.md
           mv "$source_license" "$template_license"
@@ -77,5 +87,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Initialize project files"
+          git commit -m "作業領域の初期ファイルを整備"
           git push
