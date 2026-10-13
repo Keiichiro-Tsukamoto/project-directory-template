@@ -37,6 +37,8 @@ def project_directories(root):
         raise Stopped('project一覧を確認不能')
     result = []
     for p in sorted(projects.iterdir()):
+        if p.name == '.DS_Store' and not p.is_symlink() and p.is_file():
+            continue  # OS補助ファイルの本文は読まず、削除もしない。
         if p.name == '.gitkeep' and not p.is_symlink() and p.is_file() and p.stat().st_size == 0:
             continue
         if p.is_symlink() or not p.is_dir():

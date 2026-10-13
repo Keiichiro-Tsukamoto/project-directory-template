@@ -115,6 +115,45 @@ class DistributionTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             shutil.copytree(exported / 'projects/P-001', imported / 'projects/P-001')
 
+    def test_16_os_metadata_is_ignored_without_change(self):
+        self.project()
+        self.put('projects/.DS_Store', 'OS metadata')
+        path = self.root / 'projects/.DS_Store'
+        before = path.read_bytes()
+        result = validate(self.root)
+        self.assertTrue(result['passed'], result)
+        self.assertEqual(result['projects'], 1)
+        protect_inputs(self.root, self.root / 'library/current/shared.md')
+        self.assertEqual(path.read_bytes(), before)
+        self.input('workspace:library/current/shared.md')
+        with self.assertRaises(Stopped):
+            protect_inputs(self.root, self.root / 'library/current/shared.md')
+
+    def test_17_unknown_files_still_stop(self):
+        for name in ('unknown.md', '.unknown', '.DS_Store.backup'):
+            with self.subTest(name=name):
+                self.put('projects/' + name, 'unknown')
+                self.assertFalse(validate(self.root)['passed'])
+                with self.assertRaises(Stopped):
+                    protect_inputs(self.root, self.root / 'library/current/shared.md')
+                (self.root / 'projects' / name).unlink()  # 本試験で生成した一時物だけ。
+
+    def test_18_os_metadata_symlink_still_stops(self):
+        path = self.root / 'projects/.DS_Store'
+        for target in ('../library/current/shared.md', '../missing'):
+            with self.subTest(target=target):
+                path.symlink_to(target)
+                self.assertFalse(validate(self.root)['passed'])
+                with self.assertRaises(Stopped):
+                    protect_inputs(self.root, self.root / 'library/current/shared.md')
+                path.unlink()  # 本試験で生成したリンクだけ。
+
+    def test_19_os_metadata_directory_is_not_hidden(self):
+        (self.root / 'projects/.DS_Store').mkdir()
+        self.assertFalse(validate(self.root)['passed'])
+        with self.assertRaises((Stopped, OSError)):
+            protect_inputs(self.root, self.root / 'library/current/shared.md')
+
     def test_15_validation_is_read_only(self):
         self.project(); self.input('workspace:library/current/shared.md')
         def snapshot():
