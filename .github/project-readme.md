@@ -14,6 +14,14 @@
 
 案件の背景・目的・目標は各projectで管理します。基本操作にPythonやGitは必須ではありません。共有管理情報の並行更新を行う場合は、[管理操作の手順](_control/tools/shared_operations/README.md)に従ってください。
 
+## 別の既存projectを取り込む
+
+複数の既存projectをこの作業領域へ集める場合は、次の指示を渡してください。先に`projects/`へコピーする必要はありません。
+
+> 最初に`_control/rules.md`を読んでください。別の既存projectをこの作業領域へ取り込みたいので、作業領域管理タスクで取込案を作成してください。`_control/reference/operation_guide.md`の「既存projectを取り込む」に従い、まずコピーを置く受入場所と、私が用意するものを案内してください。元資料は保持し、反映・削除・Git変更は承認まで行わないでください。
+
+人が案内された管理WIPへ取込元のコピーを置き、その場所と希望するProject IDを伝えます。タスクと成果物はprojectごとに保持し、既定ではGit履歴を統合しません。詳しくは[取込手順](_control/reference/operation_guide.md#既存projectを取り込む)を参照してください。
+
 ## 更新とフィードバック
 
 > `_control/rules.md`に従い、`library/current/skills/template-update/SKILL.md`を使って既定更新元から更新案を作成してください。反映は承認まで行わないでください。
