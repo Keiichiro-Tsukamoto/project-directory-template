@@ -39,7 +39,24 @@ class DistributionTests(unittest.TestCase):
         self.put(prefix + '_control/context.md', '# Context\n\n| Task ID | File |\n|---|---|\n')
 
     def input(self, value, name='P-001'):
-        self.put(f'projects/{name}/_control/context.md', '# Context\n\n| Task ID | File |\n|---|---|\n| T-001 | ' + value + ' |\n')
+        values = [value] if isinstance(value, str) else value
+        self.put(f'projects/{name}/_control/context.md', '# Context\n\n| Task ID | File |\n|---|---|\n' +
+                 ''.join('| T-001 | ' + item + ' |\n' for item in values))
+
+    @staticmethod
+    def descriptor(**overrides):
+        values = {'スキーマ版': '3', 'サービス': 'test-service',
+                  'ワークスペース': 'test-workspace', 'リソースID': 'report-1',
+                  'ロケーター': '', '対象オブジェクト': '指定document全体',
+                  '構造': 'atomic', '構成単位': 'なし', '構成規則': 'なし',
+                  '変更性': 'mutable', '取得モード': 'live',
+                  '期待するリビジョン': '', '鮮度確認方法': 'revision',
+                  'キャッシュ再利用': '同一版確認時のみ', '検証不能時': '停止',
+                  'ローカルスナップショット': '', 'ローカル保存': '許可',
+                  'Git登録': '禁止', 'アクセス上の注意': ''}
+        values.update(overrides)
+        return '# 外部リソース: Test\n\n' + ''.join(
+            f'- {key}: {value}\n' for key, value in values.items())
 
     def test_01_empty_distribution(self):
         self.assertTrue(validate(DIST)['passed'])
@@ -161,6 +178,58 @@ class DistributionTests(unittest.TestCase):
         before = snapshot()
         self.assertTrue(validate(self.root)['passed'])
         self.assertEqual(before, snapshot())
+
+    def test_20_registered_current_descriptor_valid_and_invalid(self):
+        self.project()
+        self.put('projects/P-001/current/report.remote.md', self.descriptor())
+        self.input('current/report.remote.md')
+        self.assertTrue(validate(self.root)['passed'])
+        self.put('projects/P-001/current/report.remote.md', self.descriptor(**{'取得モード': 'invalid'}))
+        self.assertFalse(validate(self.root)['passed'])
+        self.put('projects/P-001/reference/external/broken.md', '# Broken heading\n')
+        self.input('reference/external/broken.md')
+        self.assertFalse(validate(self.root)['passed'])
+
+    def test_21_snapshot_uses_descriptor_owner_not_consumer(self):
+        self.project(); self.project('P-002')
+        for owner in ('projects/P-002', 'library', 'profiles/test-user', '_control'):
+            with self.subTest(owner=owner):
+                self.put(owner + '/reference/snapshot.txt', 'snapshot')
+                self.put(owner + '/current/report.remote.md', self.descriptor(**{
+                    '取得モード': 'snapshot', '鮮度確認方法': 'not-applicable',
+                    'キャッシュ再利用': '固定スナップショットのみ',
+                    'ローカルスナップショット': 'reference/snapshot.txt'}))
+                descriptor = 'workspace:' + owner + '/current/report.remote.md'
+                self.input([descriptor, 'workspace:' + owner + '/reference/snapshot.txt'])
+                self.assertTrue(validate(self.root)['passed'])
+                self.put('projects/P-001/reference/snapshot.txt', 'consumer-local copy')
+                self.input([descriptor, 'reference/snapshot.txt'])
+                self.assertFalse(validate(self.root)['passed'])
+        self.put('projects/P-001/current/report.remote.md', self.descriptor(**{
+            '取得モード': 'snapshot', '鮮度確認方法': 'not-applicable',
+            'キャッシュ再利用': '固定スナップショットのみ',
+            'ローカルスナップショット': 'workspace:library/reference/snapshot.txt'}))
+        self.input(['current/report.remote.md', 'workspace:library/reference/snapshot.txt'])
+        self.assertTrue(validate(self.root)['passed'])
+
+    def test_22_identity_is_scoped_to_consuming_task(self):
+        self.project(); self.project('P-002')
+        for project in ('P-001', 'P-002'):
+            self.put(f'projects/{project}/current/report.remote.md', self.descriptor())
+            self.input('current/report.remote.md', name=project)
+        self.assertTrue(validate(self.root)['passed'])
+        self.input(['current/report.remote.md', 'workspace:projects/P-002/current/report.remote.md'])
+        self.assertFalse(validate(self.root)['passed'])
+
+    def test_23_nonresources_and_unregistered_descriptors_are_excluded(self):
+        self.project()
+        self.put('projects/P-001/current/report.md', '# Report\n\n# 外部リソース: example only\n')
+        self.put('projects/P-001/_control/reference/external/_template.md', '# 外部リソース: template\n')
+        self.put('projects/P-001/current/unregistered.remote.md', '# 外部リソース: broken\n')
+        self.input(['current/report.md', '_control/reference/external/_template.md'])
+        before = {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+        self.assertTrue(validate(self.root)['passed'])
+        self.assertEqual(before, {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
 
 
 if __name__ == '__main__':
