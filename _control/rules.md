@@ -6,6 +6,8 @@
 
 ファイルを開く権限があっても、作業の入力として読む許可があるとはみなさない。本規則の起動手順と、選択したタスクの`context.md`に従って読む。アクセス権限を変更しない。
 
+人が指定したDrive作業領域を新しい空の作業場所へ取得する場合に限り、指定先の実際の`_control/rules.md`と`_control/reference/remote_workspace.md`の初回取得手順を、context登録前に読める。取得後は本規則から通常の順で起動し、必要なガイドを対象タスクへ登録する。この例外を業務本文の一括読込許可には広げない。
+
 | 場所 | 役割 |
 |---|---|
 | `workspace:_control/` | 共通規則、作業領域管理タスク、共通ガイド、管理プログラム |
@@ -187,6 +189,7 @@ contextには、同じ管理範囲の`tasks.md`で`pending / active / blocked`�
 |---|---|
 | 入力不足・タスク切替・引継ぎ・完了・隔離・共有依頼・依存更新・project管理・共通規則／ガイド／管理プログラムの更新 | [`workspace:_control/reference/operation_guide.md`](reference/operation_guide.md) |
 | 外部参照記述の作成・外部資料の利用（ローカル保存本文を含む）・取得・保存・鮮度確認・更新 | [`workspace:_control/reference/external_resource_context.md`](reference/external_resource_context.md) |
+| Driveへの保存・交代引継ぎ・取得後のローカル整理 | [`workspace:_control/reference/remote_workspace.md`](reference/remote_workspace.md) |
 | Git・ハッシュ・差分・成果物の一式化 | [`workspace:_control/reference/git_artifact_management.md`](reference/git_artifact_management.md) |
 | モデル選択・委譲・分業・並列化 | [`workspace:_control/reference/model_routing_and_delegation.md`](reference/model_routing_and_delegation.md) |
 | 複数タスクへ影響する判断の記録 | [`workspace:_control/reference/architecture_decision_records.md`](reference/architecture_decision_records.md) |
