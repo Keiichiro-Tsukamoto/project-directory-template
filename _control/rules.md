@@ -6,6 +6,8 @@
 
 ファイルを開く権限があっても、作業の入力として読む許可があるとはみなさない。本規則の起動手順と、選択したタスクの`context.md`に従って読む。アクセス権限を変更しない。
 
+通常のローカル起動では以下に従う。`workspace:_control/reference/external/remote_workspace.md`が存在する場合、または人がDrive上の作業領域からの再開を指定した場合は、作業範囲の選択より先に[リモート保存と交代引継ぎ](reference/remote_workspace.md#起動と再開)へ進む。この起動の接続を完了済みなら、更新後の規則を読む時も同じ接続を繰り返さず1節へ進む。別環境からの再開時は改めて接続する。この初回・再開接続に限り、同ガイド、[参照リソースの共通手順](reference/external_resource_context.md)、保存先の参照記述、起動に必要な規則・管理情報をcontext登録前に読める。対象決定後に必要なガイドと参照記述をcontextへ登録する。業務本文の一括読込や未登録領域の探索は許可しない。
+
 | 場所 | 役割 |
 |---|---|
 | `workspace:_control/` | 共通規則、作業領域管理タスク、共通ガイド、管理プログラム |
@@ -186,14 +188,15 @@ contextには、同じ管理範囲の`tasks.md`で`pending / active / blocked`�
 | 操作 | ガイド |
 |---|---|
 | 入力不足・タスク切替・引継ぎ・完了・隔離・共有依頼・依存更新・project管理・共通規則／ガイド／管理プログラムの更新 | [`workspace:_control/reference/operation_guide.md`](reference/operation_guide.md) |
-| 外部参照記述の作成・外部資料の利用（ローカル保存本文を含む）・取得・保存・鮮度確認・更新 | [`workspace:_control/reference/external_resource_context.md`](reference/external_resource_context.md) |
+| 参照記述の作成・遠隔成果物／外部資料の利用（ローカル保存本文を含む）・取得・保存・鮮度確認・更新 | [`workspace:_control/reference/external_resource_context.md`](reference/external_resource_context.md) |
+| Driveへの保存・交代引継ぎ・取得後のローカル整理 | [`workspace:_control/reference/remote_workspace.md`](reference/remote_workspace.md) |
 | Git・ハッシュ・差分・成果物の一式化 | [`workspace:_control/reference/git_artifact_management.md`](reference/git_artifact_management.md) |
 | モデル選択・委譲・分業・並列化 | [`workspace:_control/reference/model_routing_and_delegation.md`](reference/model_routing_and_delegation.md) |
 | 複数タスクへ影響する判断の記録 | [`workspace:_control/reference/architecture_decision_records.md`](reference/architecture_decision_records.md) |
 
 更新・フィードバック等のスキルは、人が指定したもの、または利用可能な説明から一意に選べたものだけを読む。所在不明なら正確なパスを確認する。未登録の全スキルを探索・読込しない。スキルは本規則を緩和しない。
 
-外部資料の読込順は、上表の外部参照ガイドの[「本文利用前の確認」](reference/external_resource_context.md#本文利用前の確認)に従う。未登録の作業領域外を探索・操作しない。projectの持出しは`workspace:_control/reference/operation_guide.md`の[「projectの取込と持出し」](reference/operation_guide.md#projectの取込と持出し)に従い、現在の作業領域内で資料と手順を準備するところまでとする。
+遠隔成果物と外部資料の読込順は、上表の共通参照ガイドの[「本文利用前の確認」](reference/external_resource_context.md#本文利用前の確認)に従う。未登録の作業領域外を探索・操作しない。projectの持出しは`workspace:_control/reference/operation_guide.md`の[「projectの取込と持出し」](reference/operation_guide.md#projectの取込と持出し)に従い、現在の作業領域内で資料と手順を準備するところまでとする。
 
 モデル選択・委譲を行わない通常作業では、そのガイドを読む必要はない。利用できない上位モデルへの委譲を前提として作業を進めない。
 
