@@ -5,7 +5,7 @@
 
 ## はじめに
 
-これはv2.1.0の作業領域版です。旧v1構造からの移行・取込には対応しません。公開済みの旧版はGitHub Releasesから参照できます。
+これはv2.1.0の作業領域版です。保守対象は[対応バージョン](_control/reference/operation_guide.md#対応バージョン)を参照してください。
 
 新規作成ではGitHubの「Use this template」を利用できます。初回の自動処理はREADMEを作業領域用に変更し、配布元のLICENSEを`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名します。処理を利用できない場合は[手動初期化](reference/template_update_guide.md#新規作成時の手動初期化)に従ってください。利用中の既存環境でこの初期化処理を実行しません。
 
@@ -25,7 +25,7 @@ Project IDを決め、背景・目的・目標を初期化タスクで整理し�
 
 > 最初に`_control/rules.md`を読んでください。別の既存projectをこの作業領域へ取り込みたいので、作業領域管理タスクで取込案を作成してください。`_control/reference/operation_guide.md`の「既存projectを取り込む」に従い、まずコピーを置く受入場所と、私が用意するものを案内してください。元資料は保持し、反映・削除・Git変更は承認まで行わないでください。
 
-取込対象はv2系の作業領域内のprojectです。人が案内された管理WIPへ取込元のコピーを置き、その場所と希望するProject IDを伝えます。タスクと成果物はprojectごとに保持し、既定ではGit履歴を統合しません。詳しくは[取込手順](_control/reference/operation_guide.md#既存projectを取り込む)を参照してください。
+取込対象は別の作業領域内のprojectです。人が案内された管理WIPへ取込元のコピーを置き、その場所と希望するProject IDを伝えます。タスクと成果物はprojectごとに保持し、既定ではGit履歴を統合しません。詳しくは[取込手順](_control/reference/operation_guide.md#既存projectを取り込む)を参照してください。
 
 ## 配置
 
