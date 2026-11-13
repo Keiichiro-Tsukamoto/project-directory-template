@@ -232,6 +232,118 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual(before, {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
 
 
+    @staticmethod
+    def descriptor_v2(**overrides):
+        # 外部参照のスキーマ版2は、製品の旧v1構造とは別に維持する。
+        body = DistributionTests.descriptor(**{'スキーマ版': '2', **overrides})
+        body = '\n'.join(line for line in body.splitlines()
+                         if not line.startswith(('- 対象オブジェクト:', '- 構造:', '- 構成単位:', '- 構成規則:')))
+        return body + '\n- リソース種別: document\n- 取得範囲: 本文全体\n- 代替手段: none\n'
+
+    def check_descriptor(self, body, expected=(), passed=False):
+        self.put('projects/P-001/current/report.remote.md', body)
+        self.input('current/report.remote.md')
+        result = validate(self.root)
+        self.assertEqual(result['passed'], passed, result)
+        names = {item['check'].split(':', 1)[0]
+                 for item in result.get('descriptor_failures', [])}
+        self.assertTrue(set(expected) <= names, result)
+        return result
+
+    def test_24_v2_live_and_snapshot_fallback_remain_supported(self):
+        self.project()
+        self.check_descriptor(self.descriptor_v2(), passed=True)
+        self.put('projects/P-001/reference/snapshot.txt', 'snapshot')
+        body = self.descriptor_v2(**{
+            '検証不能時': '登録スナップショットを旧版として使用',
+            'ローカルスナップショット': 'reference/snapshot.txt'})
+        self.check_descriptor(body, ['external_fallback_unverifiable_consistency'])
+        body = body.replace('- 代替手段: none', '- 代替手段: local-snapshot')
+        self.put('projects/P-001/current/report.remote.md', body)
+        self.input(['current/report.remote.md', 'reference/snapshot.txt'])
+        self.assertTrue(validate(self.root)['passed'])
+
+    def test_25_v3_structure_contract(self):
+        self.project()
+        for structure in ('atomic', 'composite', 'fixed-collection', 'dynamic-collection'):
+            with self.subTest(structure=structure):
+                fields = {} if structure == 'atomic' else {
+                    '構成単位': 'item', '構成規則': '明示した集合のitem'}
+                self.check_descriptor(self.descriptor(**{'構造': structure, **fields}), passed=True)
+        self.check_descriptor(self.descriptor(**{'構成単位': 'page'}),
+                              ['external_structure_components'])
+        self.check_descriptor(self.descriptor() + '- 取得範囲: 本文全体\n',
+                              ['external_v3_legacy_fields_absent'])
+
+    def test_26_schema_metadata_and_single_resource_contract(self):
+        self.project()
+        cases = (
+            (self.descriptor_v2().replace('- スキーマ版: 2\n', ''),
+             ['external_schema_version', 'external_fields_present']),
+            (self.descriptor().replace('- ワークスペース: test-workspace\n', ''),
+             ['external_fields_present']),
+            (self.descriptor() + self.descriptor(),
+             ['external_single_resource_heading', 'external_fields_unique']),
+        )
+        for body, expected in cases:
+            with self.subTest(expected=expected):
+                self.check_descriptor(body, expected)
+
+    def test_27_pinned_and_cache_policies(self):
+        self.project()
+        for fields, expected in (
+            ({'取得モード': 'pinned'}, 'external_pinned_revision'),
+            ({'鮮度確認方法': 'refetch'}, 'external_refetch_cache_policy'),
+            ({'取得モード': 'snapshot'}, 'external_snapshot_freshness'),
+            ({'キャッシュ再利用': '固定スナップショットのみ'}, 'external_snapshot_cache_policy'),
+        ):
+            with self.subTest(expected=expected):
+                self.check_descriptor(self.descriptor(**fields), [expected])
+        self.check_descriptor(self.descriptor(**{
+            '鮮度確認方法': 'refetch', 'キャッシュ再利用': '禁止'}), passed=True)
+        self.check_descriptor(self.descriptor(**{
+            '取得モード': 'pinned', '期待するリビジョン': 'revision-1'}), passed=True)
+
+    def test_28_snapshot_storage_mapping_and_approval_warnings(self):
+        self.project()
+        fields = {'取得モード': 'snapshot', '鮮度確認方法': 'not-applicable',
+                  'キャッシュ再利用': '固定スナップショットのみ',
+                  'ローカルスナップショット': 'reference/snapshot.txt'}
+        self.check_descriptor(self.descriptor(**fields),
+                              ['external_snapshot_exists', 'external_snapshot_mapped'])
+        self.put('projects/P-001/reference/snapshot.txt', 'snapshot')
+        for storage, git, passed in (('禁止', '禁止', False), ('許可', '禁止', True),
+                                     ('要承認', '要承認', True)):
+            with self.subTest(storage=storage, git=git):
+                self.put('projects/P-001/current/report.remote.md',
+                         self.descriptor(**{**fields, 'ローカル保存': storage, 'Git登録': git}))
+                self.input(['current/report.remote.md', 'reference/snapshot.txt'])
+                result = validate(self.root)
+                self.assertEqual(result['passed'], passed, result)
+                if not passed:
+                    self.assertTrue(any(item['check'].startswith('external_snapshot_storage_not_forbidden:')
+                                        for item in result['descriptor_failures']), result)
+                else:
+                    warnings = {item['warning'].split(':', 1)[0]
+                                for item in result['warning_details']}
+                    expected = {'external_snapshot_storage_requires_approval',
+                                'external_snapshot_git_requires_approval'} if storage == '要承認' else set()
+                    self.assertEqual(warnings, expected)
+
+    def test_29_cross_schema_identity_and_obvious_secrets(self):
+        self.project()
+        self.put('projects/P-001/current/v2.remote.md', self.descriptor_v2())
+        self.put('projects/P-001/current/v3.remote.md', self.descriptor())
+        self.input(['current/v2.remote.md', 'current/v3.remote.md'])
+        result = validate(self.root)
+        self.assertTrue(any(item['check'].startswith('external_identity_unique:')
+                            for item in result['descriptor_failures']), result)
+        self.check_descriptor(self.descriptor(**{
+            # 拒否動作の試験だけに使う架空のURLと値。
+            'ロケーター': 'https://example.invalid/doc?X-Amz-Signature=test-signature'}),
+            ['external_no_obvious_secret'])
+
+
 if __name__ == '__main__':
     result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(DistributionTests))
     report = {'tests': result.testsRun, 'passed': result.wasSuccessful(),

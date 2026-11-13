@@ -5,9 +5,9 @@
 
 ## はじめに
 
-これはv2.1.0の作業領域版です。v1系を利用中の場合は、[旧版からの移行](reference/template_update_guide.md)を読み、既存環境へ一式を上書きしないでください。
+これはv2.1.0の作業領域版です。旧v1構造からの移行・取込には対応しません。公開済みの旧版はGitHub Releasesから参照できます。
 
-新規作成ではGitHubの「Use this template」を利用できます。初回の自動処理はREADMEを作業領域用に変更し、配布元のLICENSEを`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名します。処理を利用できない場合は[手動初期化](reference/template_update_guide.md#新規作成時の手動初期化)に従ってください。既存環境の移行でこの初期化処理を実行しません。
+新規作成ではGitHubの「Use this template」を利用できます。初回の自動処理はREADMEを作業領域用に変更し、配布元のLICENSEを`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名します。処理を利用できない場合は[手動初期化](reference/template_update_guide.md#新規作成時の手動初期化)に従ってください。利用中の既存環境でこの初期化処理を実行しません。
 
 このディレクトリ全体を、利用するLLMの作業対象として指定してください。同じ利用者・LLM・プログラムに見せてよい情報だけを入れます。閲覧権限の異なる案件は別の作業領域に分け、アクセス権限は利用環境で設定してください。Markdownの規則は、技術的なアクセス制限にはなりません。
 
@@ -25,7 +25,7 @@ Project IDを決め、背景・目的・目標を初期化タスクで整理し�
 
 > 最初に`_control/rules.md`を読んでください。別の既存projectをこの作業領域へ取り込みたいので、作業領域管理タスクで取込案を作成してください。`_control/reference/operation_guide.md`の「既存projectを取り込む」に従い、まずコピーを置く受入場所と、私が用意するものを案内してください。元資料は保持し、反映・削除・Git変更は承認まで行わないでください。
 
-人が案内された管理WIPへ取込元のコピーを置き、その場所と希望するProject IDを伝えます。タスクと成果物はprojectごとに保持し、既定ではGit履歴を統合しません。詳しくは[取込手順](_control/reference/operation_guide.md#既存projectを取り込む)を参照してください。
+取込対象はv2系の作業領域内のprojectです。人が案内された管理WIPへ取込元のコピーを置き、その場所と希望するProject IDを伝えます。タスクと成果物はprojectごとに保持し、既定ではGit履歴を統合しません。詳しくは[取込手順](_control/reference/operation_guide.md#既存projectを取り込む)を参照してください。
 
 ## 配置
 
@@ -70,4 +70,4 @@ Google純正形式は正本を直接利用し、暗黙にOffice形式へ変換�
 
 ChatGPT Workの単一チャットで、project作成、承認後の初期化、パスで指定したフィードバックスキルの利用、成果物配置とタスク完了を1回確認しています。全モデル・全アプリ、自動スキル発見、実コネクタ、同時更新を確認した結果ではありません。実消費トークンや料金の削減は測定していません。
 
-安定版は[GitHub Releases](https://github.com/Keiichiro-Tsukamoto/project-directory-template/releases)のタグで固定します。「Use this template」はmainを参照するため、同じ版の再現にはReleaseのSource codeを使用してください。v1系の公開済みタグは保持し、v2への自動移行は行いません。
+安定版は[GitHub Releases](https://github.com/Keiichiro-Tsukamoto/project-directory-template/releases)のタグで固定します。「Use this template」はmainを参照するため、同じ版の再現にはReleaseのSource codeを使用してください。公開済みのタグは保持します。
