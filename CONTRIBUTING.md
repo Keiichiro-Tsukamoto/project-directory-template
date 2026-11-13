@@ -27,7 +27,7 @@ Semantic Versioningを使い、タグは`vMAJOR.MINOR.PATCH`とします。公�
 
 検証済みPRのmainへのマージ後、対象commitと配布ファイルを照合し、人の承認を得て注釈付きタグとGitHub Releaseを公開します。公開済みタグを付け替えません。GitHub Releaseを公開変更履歴の正本とし、変更点、移行要否、検証結果、既知の制約、直前版を記載します。重大な不具合・脆弱性は通常のまとめを待たず修正版を出します。
 
-v2はv1からの配置移行が必要です。[移行案内](reference/template_update_guide.md)を維持し、旧版を自動更新しません。公開候補には開発project、試験データ、個人情報、秘密情報を含めないでください。
+保守対象は[対応バージョン](_control/reference/operation_guide.md#対応バージョン)を参照してください。公開候補には開発project、試験データ、個人情報、秘密情報を含めないでください。
 
 ## ライセンス
 

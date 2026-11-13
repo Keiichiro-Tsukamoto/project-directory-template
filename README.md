@@ -5,7 +5,7 @@
 
 ## はじめに
 
-これはv2.1.0の作業領域版です。保守対象は[対応バージョン](_control/reference/operation_guide.md#対応バージョン)を参照してください。
+これはv2.1.1の作業領域版です。保守対象は[対応バージョン](_control/reference/operation_guide.md#対応バージョン)を参照してください。
 
 新規作成ではGitHubの「Use this template」を利用できます。初回の自動処理はREADMEを作業領域用に変更し、配布元のLICENSEを`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名します。処理を利用できない場合は[手動初期化](reference/template_update_guide.md#新規作成時の手動初期化)に従ってください。利用中の既存環境でこの初期化処理を実行しません。
 
