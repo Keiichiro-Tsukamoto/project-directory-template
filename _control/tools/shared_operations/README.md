@@ -8,7 +8,7 @@
 
 関係する管理表への書込みを止めてから、作業領域ルートで`python3 -B _control/tools/shared_operations/validate_workspace.py --root .`を実行する。作業領域管理と各projectの管理表、および登録されたパスの実在を確認する。登録されたMarkdownの先頭の空行を除く見出しが`# 外部リソース:`なら、配置にかかわらず既存v2/v3の項目・条件も確認する。従来の`reference/external/`等の参照記述は見出しが壊れていても検査し、先頭`_`の共通ひな型、通常のMarkdown、未登録資料は参照記述として検査しない。snapshotの相対パスは記述の所有範囲（project・library・profile・管理範囲）を基準にし、`workspace:`は作業領域ルートから解決する。参照記述以外の業務本文は利用しない。成功時は終了コード0、停止時は2。外部の権限・実内容・鮮度、承認の有無はこの検査では確認しない。プログラムが使えない場合は運用ガイドの手動確認を使う。
 
-`external_descriptors.py`は旧`context-tools/validate_template.py`とも共用する。旧CLIと共用モジュールを組として配布し、開発配置では`current/project_directory_template/_control/tools/shared_operations/`、同梱配置では`context-tools/`と同階層の`_control/tools/shared_operations/`から読み込む。Pythonを使わない基本運用の必須条件にはしない。
+`external_descriptors.py`は作業領域検査で使う外部参照スキーマ版2・3の検査モジュールである。Pythonを使わない基本運用の必須条件にはしない。
 
 `projects/.gitkeep`は空ディレクトリの配布用で、空の通常ファイルだけをproject一覧から除外する。`projects/.DS_Store`も通常ファイルの場合だけOS補助ファイルとして除外し、本文の読込・削除は行わない。同名のディレクトリを除外せず、未知のファイルやリンクは従来どおり停止する。管理表に明示された参照は、この一覧除外とは別に検査する。
 
