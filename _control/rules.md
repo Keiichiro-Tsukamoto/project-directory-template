@@ -164,7 +164,9 @@ contextには、同じ管理範囲の`tasks.md`で`pending / active / blocked`�
 
 依存は最新追随や内容の妥当性を保証しない。別範囲にある固定旧版を使い続ける場合も依存は残る。独立した複製へ承認・切替・検証が完了して元の実体が不要になった時だけ、元の依存を解消する。
 
-異なるprojectの独立した作業は並行できる。ただし同じ作業領域への並行書込みは、対象操作が共通の排他手順に接続済みで、利用環境でその効力を確認できる場合に限る。未接続・未確認の場合は、人が他の書込みを止めた単独運用で行う。`active`件数をロックとみなさない。並行書込みを行う前に、`workspace:_control/reference/operation_guide.md`の[「並行操作の保護」](reference/operation_guide.md#並行操作の保護)を登録して読む。
+異なるprojectの独立した作業は並行できる。一つの`active`タスク内で分担する場合は、9節の委譲ガイドに従い、親が割り当てた重ならないWIPだけを子が並行して編集できる。管理範囲ごとの`active`最大一件は変更しない。
+
+共有の管理表・現行ファイルへの並行書込みは、対象操作が共通の排他手順に接続済みで、利用環境でその効力を確認できる場合に限る。未接続・未確認の場合は、人が他の競合する書込みを止めた単独運用で行う。`active`件数をロックとみなさない。共有情報の並行書込みを行う前に、`workspace:_control/reference/operation_guide.md`の[「並行操作の保護」](reference/operation_guide.md#並行操作の保護)を登録して読む。
 
 ## 8. 確定と完了
 
@@ -195,6 +197,8 @@ contextには、同じ管理範囲の`tasks.md`で`pending / active / blocked`�
 | 複数タスクへ影響する判断の記録 | [`workspace:_control/reference/architecture_decision_records.md`](reference/architecture_decision_records.md) |
 
 更新・フィードバック等のスキルは、人が指定したもの、または利用可能な説明から一意に選べたものだけを読む。所在不明なら正確なパスを確認する。未登録の全スキルを探索・読込しない。スキルは本規則を緩和しない。
+
+中間成果物や複数の成果物を伴う作業を分解する時は、[`workspace:library/current/skills/task-decomposition/SKILL.md`](../library/current/skills/task-decomposition/SKILL.md)を登録して読む。委譲する場合は上表の委譲ガイドも読む。単純な一作業には分解を義務付けない。
 
 遠隔成果物と外部資料の読込順は、上表の共通参照ガイドの[「本文利用前の確認」](reference/external_resource_context.md#本文利用前の確認)に従う。未登録の作業領域外を探索・操作しない。projectの持出しは`workspace:_control/reference/operation_guide.md`の[「projectの取込と持出し」](reference/operation_guide.md#projectの取込と持出し)に従い、現在の作業領域内で資料と手順を準備するところまでとする。
 
