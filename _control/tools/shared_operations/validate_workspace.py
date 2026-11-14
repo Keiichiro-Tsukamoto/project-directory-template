@@ -52,6 +52,9 @@ def validate(root):
                 if tid not in states or states[tid] == 'done':
                     raise Stopped('contextとtasksが不整合')
                 path = scoped(value)
+                if value.startswith('workspace:') and path.is_relative_to(scope):
+                    relative = path.relative_to(scope).as_posix()
+                    raise Stopped(f'contextのFileは同じ所有範囲内では相対パスが必要: {value} → {relative}')
                 if not path.is_file() or path == details[tid] or (tid, path) in seen:
                     raise Stopped('入力がファイルでない、自タスク詳細の重複、または重複行')
                 seen.add((tid, path))

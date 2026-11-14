@@ -330,6 +330,59 @@ class DistributionTests(unittest.TestCase):
                                 'external_snapshot_git_requires_approval'} if storage == '要承認' else set()
                     self.assertEqual(warnings, expected)
 
+    def test_30_same_scope_context_requires_relative_path(self):
+        self.project()
+        self.put('projects/P-001/current/input.txt', 'project input')
+        self.put('_control/tasks.md', '# Tasks\n\n| Task ID | Name | Status | Detail |\n|---|---|---|---|\n| T-001 | 管理 | active | wip/T-001.md |\n')
+        self.put('_control/wip/T-001.md', '# Task\n')
+        self.put('_control/wip/input.txt', 'management input')
+        for context, logical, relative in (
+            ('projects/P-001/_control/context.md',
+             'workspace:projects/P-001/current/input.txt', 'current/input.txt'),
+            ('_control/context.md', 'workspace:_control/wip/input.txt', 'wip/input.txt'),
+        ):
+            with self.subTest(context=context):
+                header = '# Context\n\n| Task ID | File |\n|---|---|\n'
+                self.put(context, header + f'| T-001 | {logical} |\n')
+                before = {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+                result = validate(self.root)
+                self.assertFalse(result['passed'], result)
+                self.assertIn('同じ所有範囲内では相対パスが必要', result['reason'])
+                self.assertIn(f'{logical} → {relative}', result['reason'])
+                self.assertEqual(before, {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
+                self.put(context, header + f'| T-001 | {relative} |\n')
+                self.assertTrue(validate(self.root)['passed'])
+                self.put(context, header)
+
+    def test_31_cross_scope_workspace_paths_remain_allowed(self):
+        self.project(); self.project('P-001-other')
+        self.put('projects/P-001-other/current/input.txt', 'other project input')
+        self.put('profiles/test-user/current/input.txt', 'profile input')
+        self.put('_control/tasks.md', '# Tasks\n\n| Task ID | Name | Status | Detail |\n|---|---|---|---|\n| T-001 | 管理 | active | wip/T-001.md |\n')
+        self.put('_control/wip/T-001.md', '# Task\n')
+        header = '# Context\n\n| Task ID | File |\n|---|---|\n'
+        for context in ('projects/P-001/_control/context.md', '_control/context.md'):
+            for logical in ('workspace:projects/P-001-other/current/input.txt',
+                            'workspace:library/current/shared.md',
+                            'workspace:profiles/test-user/current/input.txt'):
+                with self.subTest(context=context, logical=logical):
+                    self.put(context, header + f'| T-001 | {logical} |\n')
+                    self.assertTrue(validate(self.root)['passed'])
+                    self.put(context, header)
+
+    def test_32_same_scope_path_safety_still_runs_first(self):
+        self.project()
+        self.put('projects/P-001/current/input.txt', 'input')
+        for logical, reason in (
+            ('workspace:projects/P-001/current/missing.txt', '参照先がない'),
+            ('workspace:projects/P-001/current/../current/input.txt', '不正なパス'),
+        ):
+            with self.subTest(logical=logical):
+                self.input(logical)
+                result = validate(self.root)
+                self.assertFalse(result['passed'], result)
+                self.assertEqual(result['reason'], reason)
+
     def test_29_cross_schema_identity_and_obvious_secrets(self):
         self.project()
         self.put('projects/P-001/current/v2.remote.md', self.descriptor_v2())
