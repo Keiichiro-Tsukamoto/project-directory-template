@@ -5,7 +5,7 @@
 - スキーマ版: 3
 - サービス: <confluence | google-drive | sharepoint | other>
 - ワークスペース: <安定したテナント、サイト、共有領域の識別子>
-- リソースID: <サービスが提供する安定した識別子>
+- リソースID: <取得手段が提供する安定した識別子。ない場合のローカル参照は共通手順に従う>
 - ロケーター: <任意の人向けURL。署名URLや認証情報を含めない>
 - 対象オブジェクト: <IDとlocatorが表す外側の境界。含むものと含まないものを明記>
 - 構造: <atomic | composite | fixed-collection | dynamic-collection>

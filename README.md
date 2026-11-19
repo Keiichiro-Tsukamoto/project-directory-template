@@ -5,7 +5,7 @@
 
 ## はじめに
 
-これはv2.4.0の作業領域版です。保守対象は[対応バージョン](_control/reference/operation_guide.md#対応バージョン)を参照してください。
+これはv2.5.0の作業領域版です。保守対象は[対応バージョン](_control/reference/operation_guide.md#対応バージョン)を参照してください。
 
 新規作成ではGitHubの「Use this template」を利用できます。初回の自動処理はREADMEを作業領域用に変更し、配布元のLICENSEを`PROJECT_DIRECTORY_TEMPLATE_LICENSE`へ改名します。処理を利用できない場合は[手動初期化](reference/template_update_guide.md#新規作成時の手動初期化)に従ってください。利用中の既存環境でこの初期化処理を実行しません。
 
@@ -32,6 +32,14 @@ Project IDを決め、背景・目的・目標を初期化タスクで整理し�
 > 作業領域は`<root>`です。`<root>/_control/rules.md`と`<root>/_control/reference/model_routing_and_delegation.md`に従い、親が指定した管理範囲・Task ID・入力・WIP出力先を引き継いでください。独立したタスクの登録・開始や管理表更新は行わず、不足・競合・成果は親の指定経路で返してください。
 
 親は作業を渡すたびに具体的な割当を伝えます。共通規則の細則は常駐指示へ複製せず、変更時は関係する担当で規則を読み直します。
+
+## 既存projectに資料を移さず追加する
+
+既存projectに外部の資料だけを参照追加する場合は、取込やT-001の初期化を繰り返しません。例えば次のように依頼します。
+
+> `_control/rules.md`に従い、Project ID「対象のID」で、指定する外部資料を元の場所に残したまま参照追加してください。`_control/reference/operation_guide.md`の「既存projectへ外部資料を参照追加する」を使い、新しい作業はprojectのWIPで行ってください。元資料の変更・移動・削除はしないでください。
+
+取得先・対象範囲と利用可能なアクセス手段を指定してください。既存形式の参照記述を使い、登録だけで権限を増やしません。読めない環境では必要部分の提供を依頼します。フォルダ全体のコピー・ハッシュ照合や新コマンドは必須ではありません。詳しくは[参照追加の手順](_control/reference/operation_guide.md#既存projectへ外部資料を参照追加する)を参照してください。
 
 ## 別の既存projectを取り込む
 

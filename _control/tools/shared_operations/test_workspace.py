@@ -58,6 +58,25 @@ class DistributionTests(unittest.TestCase):
         return '# 外部リソース: Test\n\n' + ''.join(
             f'- {key}: {value}\n' for key, value in values.items())
 
+    def test_33_external_local_folder_uses_descriptor_not_context_path(self):
+        self.project()
+        external = Path(self.tmp.name) / 'external-materials'
+        external.mkdir()
+        (external / 'sample.txt').write_text('架空の参照資料', encoding='utf-8')
+        uri = external.as_uri() + '/'
+        self.put('projects/P-001/reference/external/materials.md', self.descriptor(**{
+            'サービス': 'other', 'ワークスペース': 'fixture-pc', 'リソースID': uri,
+            'ロケーター': uri, '対象オブジェクト': 'sample.txtのみ',
+            '構造': 'dynamic-collection', '構成単位': 'file',
+            '構成規則': '直下のsample.txtのみ。その他を含めない',
+            '鮮度確認方法': 'refetch', 'キャッシュ再利用': '禁止'}))
+        self.input('reference/external/materials.md')
+        self.assertTrue(validate(self.root)['passed'])
+        # 形式検査は外の資料を取得しない。contextに外の実体は直接登録しない。
+        self.assertFalse((self.root / 'projects/P-001/reference/sample.txt').exists())
+        self.input(uri)
+        self.assertFalse(validate(self.root)['passed'])
+
     def test_01_empty_distribution(self):
         self.assertTrue(validate(DIST)['passed'])
 
