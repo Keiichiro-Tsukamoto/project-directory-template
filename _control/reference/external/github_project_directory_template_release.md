@@ -8,7 +8,7 @@
 - 対象オブジェクト: 最新の安定releaseが指定する版の、作業領域版の配布ファイル群。Issues、他のrelease、default branchの未公開変更、利用者の業務資料は含めない。
 - 構造: dynamic-collection
 - 構成単位: file
-- 構成規則: draftとprereleaseを除く最新の安定releaseのtagを固定し、その版の配布ルートにある_control/、library/current/skills/template-update/、library/current/skills/product-feedback/、README.md、LICENSE、.gitignoreを対象とする。配布ルートは当該releaseの公開説明で特定する。一意に特定できない場合、または作業領域版でない場合は停止する。
+- 構成規則: draftとprereleaseを除く最新の安定releaseのtagを固定する。その版の配布ルートの_control/、README.md、LICENSE、.gitignoreと、library/current/skills/配下で公式スキルとして配布された各スキルの同梱ファイルを対象とする。配布ルートは当該releaseの公開説明で特定する。一意に特定できない場合、または作業領域版でない場合は停止する。
 - 変更性: mutable
 - 取得モード: live
 - 期待するリビジョン:
