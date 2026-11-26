@@ -87,6 +87,7 @@ projectの作成・取込・持出し・削除、共通規則、`library/`、`pr
 | ファイル・列 | 意味 |
 |---|---|
 | `project.md`の`Background / Purpose / Goal` | 背景、目的、達成する目標 |
+| `project.md`の任意の`Notes` | タスクに属さない案件全体の補記。[案件の現況と定常運用](reference/operation_guide.md#案件の現況と定常運用)に従う |
 | `tasks.md`の`Task ID / Name / Status / Detail` | 範囲内で一意なID、人向け名称、状態、詳細の場所 |
 | `context.md`の`Task ID / File` | そのタスクで利用できる正規入力一ファイル。読込許可であり一括読込指示ではない |
 | `workspace:_control/dependencies.md`の`Consumer / Source` | 現行成果物が別範囲の実体を継続して必要とする関係。削除・移動・置換前の影響確認に使う |
@@ -166,7 +167,7 @@ contextには、同じ管理範囲の`tasks.md`で`pending / active / blocked`�
 
 | 操作 | ガイド |
 |---|---|
-| 入力不足・タスク切替・引継ぎ・完了・隔離・共有依頼・依存更新・project管理・共通規則／ガイド／管理プログラムの更新 | [`workspace:_control/reference/operation_guide.md`](reference/operation_guide.md) |
+| 案件の現況・定常運用・入力不足・タスク切替・引継ぎ・完了・隔離・共有依頼・依存更新・project管理・共通規則／ガイド／管理プログラムの更新 | [`workspace:_control/reference/operation_guide.md`](reference/operation_guide.md) |
 | 参照記述の作成・遠隔成果物／外部資料の利用（ローカル保存本文を含む）・取得・保存・鮮度確認・更新 | [`workspace:_control/reference/external_resource_context.md`](reference/external_resource_context.md) |
 | Driveへの保存・交代引継ぎ・取得後のローカル整理 | [`workspace:_control/reference/remote_workspace.md`](reference/remote_workspace.md) |
 | Git・ハッシュ・差分・成果物の一式化 | [`workspace:_control/reference/git_artifact_management.md`](reference/git_artifact_management.md) |
